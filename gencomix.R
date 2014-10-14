@@ -16,7 +16,7 @@ for(i in 1:N) {
     hap[[i]] <- as.integer(tmp[-c(1:2)])
     names(hap)[i] <- paste(tmp[1:2],collapse="-")
 }
-ncut <- c(4,4) # cut down hap in size
+ncut <- c(2,2) # cut down hap in size
 refH1 <- hap[ grep("^p1",names(hap))[1:ncut[1]] ]
 names(refH1) <- sapply(strsplit(names(refH1),"-"),'[',2)
 
@@ -32,6 +32,13 @@ names(sampHap) <- paste("h",(sum(ncut)+1):((sum(ncut))+length(sampHap)) ,sep="")
 # names(sampHap) <- c("h3","h4")
 ################################################################################
 ################################################################################
+
+for(i in 1:length(refH1)) {
+    refH1[[i]] <- refH1[[i]] [1:5]
+    refH2[[i]] <- refH2[[i]] [1:5]
+}
+obs <- c(0,0,1,1,0)
+
 
 
 ################################################################################
@@ -64,7 +71,7 @@ gam <- 2e-16 # 1/1000 # gene conversion rate
 lam <- 1/500 # mean GC tract length
 #
 S <- length(sampHap[[1]])# how many biallelic loci (SNPs, segregating sites). 2^S possible haplotypes
-n <- length(sampHap) # how many haplotypes in the sample ###haploid individuals
+#n <- length(sampHap) # how many haplotypes in the sample ###haploid individuals
 
 k=1
 obs <- sampHap[[k]] # copy of observed haplotype
@@ -158,6 +165,7 @@ for(f in 1:nk) { # transition from...
 # rowSums(transG)
 # rowSums(transG)==1
 
+if(0) { # skip:
 ### combined transition matrix:
 #states <- apply( expand.grid( rownames(transX), rownames(transG) ), 1, paste, collapse="-")
 states <- apply( expand.grid( sX, sG ), 1, paste, collapse="-")
@@ -172,9 +180,28 @@ for(i in 1:nrow(trans)) {
     }
 }
 transL[[j]] <- trans
+} # end skip
+
+########################################
+# only haplotype transitions:
+states <- sX
+trans <- transX
+dimnames(trans) <- list(states,states)
+sP <- sapply(strsplit(states,"-"),"[",1)
+sX <- sapply(strsplit(states,"-"),"[",2)
+sG <- sapply(strsplit(states,"-"),"[",4)
+transL[[j]] <- trans
+########################################
 
 } # end j loop
 rm(trans)
+
+for(i in 1:length(transL)) {
+    transL[[i]][1,] <- c(0.947421,0.036841,rep(0.007869,2))
+    transL[[i]][2,] <- c(0.036841,0.947421,rep(0.007869,2))
+    transL[[i]][3,] <- c(rep(0.031478,2),0.923812,0.013232)
+    transL[[i]][4,] <- c(rep(0.031478,2),0.013232,0.923812)
+}
 
 ##################################################
 ##################################################
@@ -184,6 +211,8 @@ emit <- c(
     match = (2*(n1+n2)*L+theta) / (2*((n1+n2)*L+theta)) , # match
     mismatch = theta / ( 2*((n1+n2)*L+theta) ) # mismatch
 )
+emit <- c( match=0.9, mismatch=0.1 )
+sXG <- sX
 
 emat <- t(sapply( c(refH1,refH2), function(x) x==obs ))
 emat[emat==TRUE] <- 1
@@ -210,6 +239,7 @@ sprob[g1i] <- log( 1/(n1+n2) *
 ### add noise:
 sprob <- sprob -rnorm( length(states), sd=0.0001 )
 
+sprob <- log( c( rep(0.025,2), rep(0.225,2) ) )
 
 #sprob[8] <- sprob[8]+2
 #sprob[9:length(sprob)] <- 0
@@ -222,6 +252,7 @@ for(j in 2:S) {
     for(state1 in states) { # hap loop
         lsum <- -Inf
         for(state0 in states) {
+            cat( state0,"->",state1,"=", transL[[j-1]][state0,state1], "*", exp(fwd[state0,j-1]), "=", transL[[j-1]][state0,state1] * exp(fwd[state0,j-1]), "\n" )
             #tmp <- fwd[state0,j-1] + log( trans[state0,state1] )
             tmp <- fwd[state0,j-1] + log( transL[[j-1]][state0,state1] )
             if(tmp>-Inf) lsum <- tmp + log(1+exp(lsum-tmp))
@@ -232,6 +263,33 @@ for(j in 2:S) {
     }
 }
 Pxa <- logsum(fwd[,S])
+
+# fwd:
+sprob <- ( c( rep(0.025,2), rep(0.225,2) ) )
+fwd <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
+fwd[,1] <- sprob
+for(j in 2:S) {
+    cnt <- 1
+    for(state1 in states) { # hap loop # transitions from state0 to state1
+        lsum <- c() 
+        for(state0 in states) {
+            cat( state0,"->",state1,"=", transL[[j-1]][state0,state1], "*", (fwd[state0,j-1]), "=", transL[[j-1]][state0,state1] * (fwd[state0,j-1]), "\n" )
+            #tmp <- fwd[state0,j-1] + log( trans[state0,state1] )
+            tmp <- fwd[state0,j-1] * ( transL[[j-1]][state0,state1] )
+            lsum <- c(lsum, tmp )
+        }
+        hname <- sXG[cnt]; cnt <- cnt+1
+        #fwd[state1,j] <- log( emit[ ifelse( c(sapply(refH1,'[',j),sapply(refH2,'[',j))[hname] ==obs[j],1,2) ] ) +lsum
+        #fwd[state1,j] <- round( ( emit[ emat[hname,j] ] ) * sum(lsum) , 6)
+        fwd[state1,j] <- ( emit[ emat[hname,j] ] ) * sum(lsum)
+    }
+}
+
+
+
+
+
+
 
 emat[,47:50]
 fwd[1:8,47:50]
