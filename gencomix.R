@@ -3,7 +3,8 @@ setwd("~/Dropbox/lab/hmm/")
 ################################################################################
 ################################################################################
 ################################################################################
-# load in data:
+if(0) {
+# load in manually simulated data:
 #fname <- "~/Dropbox/lab/hmm/data/sampleData_cgchmm.txt"
 #fname <- paste("~/Dropbox/lab/hmm/data/sampleData_",paste(N,collapse="-"),"_cgchmm.txt",sep="")
 fname <- "~/Dropbox/lab/hmm/data/sampleData_10-10_cgchmm.txt"
@@ -31,6 +32,83 @@ names(sampHap) <- paste("h",(sum(ncut)+1):((sum(ncut))+length(sampHap)) ,sep="")
 # refH1 <- refH1[1]
 # refH2 <- refH2[1]; names(refH2)="h2"
 # names(sampHap) <- c("h3","h4")
+} # end skip
+################################################################################
+################################################################################
+
+################################################################################
+################################################################################
+# load 1000G data:
+
+# vcftools --gzvcf ALL.chr22.phase3_shapeit2_mvncall_integrated_v5.20130502.genotypes.vcf.gz --keep admix/indivs-to-keep_full --chr 22 --from-bp 20000000 --to-bp 21000000 --phased --remove-indels --recode --out admix/CEU-YRI_full
+# vcftools --gzvcf CEU-YRI_full.vcf.gz --ldhat --chr 22 --out CEU-YRI_full
+
+start <- Sys.time()
+
+sitefname <- "~/storage/admix1000G/admix/CEU-YRI_full.ldhat.sites"
+locfname <- "~/storage/admix1000G/admix/CEU-YRI_full.ldhat.locs"
+
+n1h <- 99
+n2h <- 107
+
+tmp <- scan( sitefname, what=character(), skip=1, quiet=TRUE)
+hapnames <- gsub("^>","",tmp[ seq(1,length(tmp),by=2) ])
+tmp <- tmp[ seq(2,length(tmp),by=2) ]
+hap <- lapply( strsplit(tmp,""), as.integer )
+names(hap)[1:(n1h*2)] <- paste("p1-",hapnames[1:(n1h*2)],sep="")
+names(hap)[(n1h*2+1):length(hap)] <- paste("p2-",hapnames[(n1h*2+1):length(hap)],sep="")
+
+# reduce the haplotype size:
+hsize <- 11200
+hap <- lapply(hap,function(x) x[1:hsize] )
+
+# cut down hap in size
+ncut <- c(n1h*2,n2h*2) 
+# pop 1:
+refH1 <- hap[ grep("^p1",names(hap))[1:ncut[1]] ]
+#names(refH1) <- sapply(strsplit(names(refH1),"-"),'[',2)
+names(refH1) <- paste("h",1:ncut[1] ,sep="")
+# pop 2:
+refH2 <- hap[ grep("^p2",names(hap))[1:ncut[2]] ]
+names(refH2) <- paste("h",(ncut[1]+1):sum(ncut) ,sep="")
+
+# chr locations:
+dvec <- scan( locfname, what=numeric(), skip=1, quiet=TRUE)
+dvec <- dvec * 1000
+dvec <- dvec[1:hsize]
+
+# create an admixed individual:
+sampHap <- list()
+S <- length(hap[[1]])
+nbreaks <- 4
+bp <- sort(sample(S,nbreaks))
+
+refH1mix <- sample(1:length(refH1),1)
+refH2mix <- sample(1:length(refH2),1)
+
+m1 <- refH1[[refH1mix]]
+m2 <- refH2[[refH2mix]]
+
+# remove "parent" haplotypes:
+refH1 <- refH1[-refH1mix]
+refH1 <- refH2[-refH2mix]
+
+
+bpix1 <- matrix( c(1,bp,S), ncol=2, byrow=TRUE )
+bpix2 <- matrix( bp, ncol=2, byrow=TRUE )
+bpix2[,1] <- bpix2[,1]+1
+bpix2[,2] <- bpix2[,2]-1
+
+mix <- list()
+mix[ seq(1,nrow(bpix1)*2,by=2) ] <- lapply(1:nrow(bpix1), function(x) m1[ bpix1[x,1]:bpix1[x,2] ] )
+mix[ seq(2,nrow(bpix2)*2,by=2) ] <- lapply(1:nrow(bpix2), function(x) m2[ bpix2[x,1]:bpix2[x,2] ] )
+sampHap[[1]] <- unlist(mix)
+
+mixcol <- mix
+for(x in seq(1,nrow(bpix1)*2,by=2) ) mixcol[[x]] <- rep(4,length(mix[[x]]))
+for(x in seq(2,nrow(bpix2)*2,by=2) ) mixcol[[x]] <- rep(2,length(mix[[x]]))
+mixcol <- unlist(mixcol)
+
 ################################################################################
 ################################################################################
 
@@ -61,22 +139,29 @@ u1 <- 0.8
 #theta <- sum( 1/(1:(n-1)) )^-1
 theta <- 1/1000 # (1 per kb)
 rho <- 1/1000000 # crossover rate (1 per kb)
-gam <- 1/1000 # gene conversion rate 
+gam <- 1/10000 # gene conversion rate 
 lam <- 1/500 # mean GC tract length
 #
-S <- length(sampHap[[1]])# how many biallelic loci (SNPs, segregating sites). 2^S possible haplotypes
+# S <- length(sampHap[[1]])# how many biallelic loci (SNPs, segregating sites). 2^S possible haplotypes
 n <- length(sampHap) # how many haplotypes in the sample ###haploid individuals
 
 k=1
 obs <- sampHap[[k]] # copy of observed haplotype
 
-# for(i in 1:4) {
-#     refH1[[i]][ sample(1:50,6) ] <- 0
-#     refH2[[i]][ sample(1:50,6) ] <- 1
-# }
+param <- list(
+    n1 = n1, n2 = n2,
+    T = T,
+    u1 = u1,
+    rho = rho ,
+    gam = gam, lam=lam ,
+    theta = theta 
+    )
+
+
 ########################################
 ########################################
 
+cat("Calculating transition probabilities...\t"); start1 <- Sys.time()
 # transition matrices for entire sequence:
 transL <- list()
 for(j in 1:(S-1) ) { # site along haplotype sequence
@@ -177,6 +262,8 @@ transL[[j]] <- trans
 } # end j loop
 rm(trans)
 
+cat("done in ",format(Sys.time()-start1),"\n")
+
 ##################################################
 ##################################################
 
@@ -215,6 +302,9 @@ sprob <- sprob -rnorm( length(states), sd=0.0001 )
 #sprob[8] <- sprob[8]+2
 #sprob[9:length(sprob)] <- 0
 
+
+cat("Calculating forward probabilities...\t"); start1 <- Sys.time()
+
 #fwd:
 fwd <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
 fwd[,1] <- sprob
@@ -234,6 +324,8 @@ for(j in 2:S) {
 }
 Pxa <- logsum(fwd[,S])
 
+cat("done in ",format(Sys.time()-start1),"\n")
+cat("Calculating backward probabilities...\t"); start1 <- Sys.time()
 
 #bwd:
 bwd <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
@@ -252,6 +344,8 @@ for(j in (S-1):1) {
         bwd[state1,j] <- lsum
     }
 } # seq loop j
+
+cat("done in ",format(Sys.time()-start1),"\n")
 
 Pxb <- bwd[1,1] + sprob[1]; cnt <- 2
 if(length(states)>1) {
@@ -275,6 +369,8 @@ path <- apply(pprob,2,max)
 names(path) <- states[ apply(pprob,2,which.max) ]
 
 
+cat("Calculating Viterbi probabilities...\t"); start1 <- Sys.time()
+
 # viterbi:
 vit <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
 # initial state:
@@ -297,6 +393,7 @@ vpath[S] <- states[ which.max( vit[,length(obs)] ) ]
 for(i in (length(obs)-1):1 ) {
     vpath[i] <- states[ which.max( vit[states,i] + log(transL[[i]][states,vpath[i+1]]) ) ]
 }
+cat("done in ",format(Sys.time()-start1),"\n")
 
 
 path <- numeric(S)
@@ -314,12 +411,16 @@ print( bwd[1:8,11:13],digits=22 )
 print( pprob[1:8,11:13],digits=22 )
 
 
+paste( paste(names(param),param,sep="=") ,collapse=";")
 
+runtime <- Sys.time() - start
+cat("Total runtime of ",format(runtime),"\n")
 
-pdf("results/simpleHmm_withGC.pdf",width=11,height=6)
+pdf( paste( "results/admix1000G_n",sum(ncut),"_S",S,".pdf",sep=""), width=15,height=6 )
 ##################################################
 ##################################################
 # plot:
+
 split.screen( rbind(
                     c( 0, 1, 0.35, 1 ),
                     c( 0, 1, 0, 0.35 )
@@ -330,6 +431,7 @@ plot(dvec, 1-colSums(pprob[ sG=="0",]), xlab="", ylim=c(0,1), las=1, type="n",pc
 abline(v=dvec, lty=1, col="grey90" )
 points(dvec, 1-colSums(pprob[ sG=="0",]), type="o",pch=20 )
 title(xlab="Position (bp)" )
+#######
 screen(1)
 np <- k # which haplotype to "observe"
 nk <- n1+n2+1
@@ -345,13 +447,16 @@ for(x in c(refH1,refH2,sampHap[k])) {
     points( dvec, rep(cnt,S), pch=20, col=xcol )
     cnt <- cnt+1
 }
+xl <- dvec-diff(dvec)[c(1,1:(length(dvec)-1))]
+xr <- dvec+diff(dvec)[c(1:(length(dvec)-1),length(dvec)-1)]
+rect(xleft=xl,xright=xr,ybottom=cnt-0.75,ytop=cnt-0.5,border=NA,col=mixcol)
 abline(h=c(1,cumsum(c(length(refH1),length(refH2) ))+1)-0.5, lwd=2)
 # draw path:
 pm <- do.call("rbind",strsplit(names(path),"-"))
 colnames(pm) <- c("PX","X","PG","G")
 points( dvec, as.numeric(gsub("^h","",pm[,"X"])), type="b", cex=2)
 points( dvec, as.numeric(gsub("^[a-z]","",pm[,"G"])), type="b", cex=1.5, pch=5)
-
+#
 close.screen(all=TRUE)
 
 dev.off()
@@ -372,7 +477,7 @@ for(x in c(refH1,refH2)) { #,sampHap[k])) {
     #xcol <- ifelse( x==0, 4,2 )
     xcol <- ifelse( x==0, "-","+" )
     abline(h=cnt,col="grey80")
-    rect(xleft=c(1:50)-0.5,xright=c(1:50)+0.5, ybottom=cnt-0.5,ytop=cnt+0.5, col=pprobcol[cnt,], border="grey40" )
+    rect(xleft=c(1:ncol(pprob))-0.5,xright=c(1:ncol(pprob))+0.5, ybottom=cnt-0.5,ytop=cnt+0.5, col=pprobcol[cnt,], border="grey40" )
     #points( rep(cnt,S), pch=20, col=xcol )
     points( rep(cnt,S), pch=xcol )
     cnt <- cnt+1
