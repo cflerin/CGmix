@@ -1,4 +1,5 @@
 
+setwd("~/Dropbox/lab/hmm/")
 ################################################################################
 ################################################################################
 ################################################################################
@@ -60,7 +61,7 @@ u1 <- 0.8
 #theta <- sum( 1/(1:(n-1)) )^-1
 theta <- 1/1000 # (1 per kb)
 rho <- 1/1000000 # crossover rate (1 per kb)
-gam <- 2e-16 # 1/1000 # gene conversion rate 
+gam <- 1/1000 # gene conversion rate 
 lam <- 1/500 # mean GC tract length
 #
 S <- length(sampHap[[1]])# how many biallelic loci (SNPs, segregating sites). 2^S possible haplotypes
@@ -233,17 +234,6 @@ for(j in 2:S) {
 }
 Pxa <- logsum(fwd[,S])
 
-emat[,47:50]
-fwd[1:8,47:50]
-bwd[1:8,47:50]
-pprob[1:8,47:50]
-transL[[48]][1:8,1:8]
-
-print( fwd[1:8,11:13],digits=22 )
-print( bwd[1:8,11:13],digits=22 )
-print( pprob[1:8,11:13],digits=22 )
-
-
 
 #bwd:
 bwd <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
@@ -309,10 +299,24 @@ for(i in (length(obs)-1):1 ) {
 }
 
 
-#path <- numeric(S)
-#names(path) <- vpath
+path <- numeric(S)
+names(path) <- vpath
 
 
+emat[,47:50]
+fwd[1:8,47:50]
+bwd[1:8,47:50]
+pprob[1:8,47:50]
+transL[[48]][1:8,1:8]
+
+print( fwd[1:8,11:13],digits=22 )
+print( bwd[1:8,11:13],digits=22 )
+print( pprob[1:8,11:13],digits=22 )
+
+
+
+
+pdf("results/simpleHmm_withGC.pdf",width=11,height=6)
 ##################################################
 ##################################################
 # plot:
@@ -350,6 +354,7 @@ points( dvec, as.numeric(gsub("^[a-z]","",pm[,"G"])), type="b", cex=1.5, pch=5)
 
 close.screen(all=TRUE)
 
+dev.off()
 
 pprobcol <- pprob[1:8,]
 pprobcol <- bwd[1:8,]
