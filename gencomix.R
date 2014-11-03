@@ -45,11 +45,11 @@ names(sampHap) <- paste("h",(sum(ncut)+1):((sum(ncut))+length(sampHap)) ,sep="")
 
 start <- Sys.time()
 
-sitefname <- "~/storage/admix1000G/admix/CEU-YRI_full.ldhat.sites"
-locfname <- "~/storage/admix1000G/admix/CEU-YRI_full.ldhat.locs"
+sitefname <- "data/CEU-YRI_full.ldhat.sites"
+locfname <- "data/CEU-YRI_full.ldhat.locs"
 
-n1h <- 99
-n2h <- 107
+n1h <- 2 # 99
+n2h <- 2 # 107
 
 tmp <- scan( sitefname, what=character(), skip=1, quiet=TRUE)
 hapnames <- gsub("^>","",tmp[ seq(1,length(tmp),by=2) ])
@@ -59,7 +59,7 @@ names(hap)[1:(n1h*2)] <- paste("p1-",hapnames[1:(n1h*2)],sep="")
 names(hap)[(n1h*2+1):length(hap)] <- paste("p2-",hapnames[(n1h*2+1):length(hap)],sep="")
 
 # reduce the haplotype size:
-hsize <- 11200
+hsize <- 10 # 11200
 hap <- lapply(hap,function(x) x[1:hsize] )
 
 # cut down hap in size
@@ -81,33 +81,24 @@ dvec <- dvec[1:hsize]
 sampHap <- list()
 S <- length(hap[[1]])
 nbreaks <- 4
-bp <- sort(sample(S,nbreaks))
+bp <- sort(sample(S-2,nbreaks)) +1
 
 refH1mix <- sample(1:length(refH1),1)
 refH2mix <- sample(1:length(refH2),1)
 
-m1 <- refH1[[refH1mix]]
-m2 <- refH2[[refH2mix]]
+m <- cbind(
+    refH1[[refH1mix]] ,
+    refH2[[refH2mix]]
+    )
 
+bp2 <- diff(c(0,bp,S))
+sw <- inverse.rle( list( lengths=bp2, values=rep(c(1,2),S)[1:length(bp2)] ) )  # switch vector
+sampHap[[1]] <- sapply(1:nrow(m),function(x) m[x,sw[x]] )
+mixcol <- ifelse(sw==1, 4,2)
+ 
 # remove "parent" haplotypes:
 refH1 <- refH1[-refH1mix]
-refH1 <- refH2[-refH2mix]
-
-
-bpix1 <- matrix( c(1,bp,S), ncol=2, byrow=TRUE )
-bpix2 <- matrix( bp, ncol=2, byrow=TRUE )
-bpix2[,1] <- bpix2[,1]+1
-bpix2[,2] <- bpix2[,2]-1
-
-mix <- list()
-mix[ seq(1,nrow(bpix1)*2,by=2) ] <- lapply(1:nrow(bpix1), function(x) m1[ bpix1[x,1]:bpix1[x,2] ] )
-mix[ seq(2,nrow(bpix2)*2,by=2) ] <- lapply(1:nrow(bpix2), function(x) m2[ bpix2[x,1]:bpix2[x,2] ] )
-sampHap[[1]] <- unlist(mix)
-
-mixcol <- mix
-for(x in seq(1,nrow(bpix1)*2,by=2) ) mixcol[[x]] <- rep(4,length(mix[[x]]))
-for(x in seq(2,nrow(bpix2)*2,by=2) ) mixcol[[x]] <- rep(2,length(mix[[x]]))
-mixcol <- unlist(mixcol)
+refH2 <- refH2[-refH2mix]
 
 ################################################################################
 ################################################################################
@@ -157,6 +148,149 @@ param <- list(
     theta = theta 
     )
 
+
+################################################################################
+L <- 1
+emit <- c(
+    match = (2*(n1+n2)*L+theta) / (2*((n1+n2)*L+theta)) , # match
+    mismatch = theta / ( 2*((n1+n2)*L+theta) ) # mismatch
+)
+
+sXh <- c(names(refH1),names(refH2) ) # haplotype (x) states
+sXp <- c( rep("p1",length(refH1)), rep("p2",length(refH2)) ) # population states
+sX <- paste(sXp,sXh,sep="-")
+#
+sGh <- c("0",sXh)
+sGp <- c("0",sXp)
+#sG <- paste( c("0",sXp), c("0",sXh),sep="-")
+sG <- paste( sGp, sGh, sep="-")
+#states <- apply( expand.grid( sX, sG ), 1, paste, collapse="-")
+st <- expand.grid( sX=sX, sG=sG, stringsAsFactors=FALSE )
+st <- cbind( st, 
+    do.call("rbind",strsplit(st$sX,"-")) ,
+    do.call("rbind",strsplit(st$sG,"-")) ,
+    apply(st,1,paste,collapse="-") ,
+    stringsAsFactors=FALSE
+    )
+colnames(st) <- c("X","G","Xpop","Xhap","Gpop","Ghap","states")
+
+ref <- do.call("rbind", c(refH1,refH2) )
+
+states <- st$states
+
+##############################
+# how to determine which haplotype to use for the emissions match/mismatch?
+# either use Xstate or G state? or
+#sXG <- sG
+#sXG[sG=="0"] <- sX[sG=="0"]
+sXG <- st$Ghap
+sXG[st$Ghap=="0"] <- st$Xhap[st$Ghap=="0"]
+#fwd:
+fwd <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
+### starting prob:
+for(i in 1:length(states) ) {
+    if( ref[ st$Xhap[i] , 1 ] == obs[1] ) {
+        e <- emit[1]
+    } else {
+        e <- emit[2]
+    }
+    if( st$Ghap[i] == "0" ) {
+        fwd[i,1] <- log( 1/(n1+n2) * (lam*(n1+n2)) / (lam*(n1+n2)+gam*T) * e )
+    }
+    if( st$Ghap[i] != "0" ) {
+        fwd[i,1] <- log( 1/(n1+n2) * (gam*T) / ((n1+n2)*(lam*(n1+n2)+gam*T)) * e )
+    }
+}
+for(j in 2:S) {
+    #d <- diff( dvec[j:(j+1)] )
+    d <- diff( dvec[ (j-1) : (j)] )
+    cnt <- 1
+    newemit <- c()
+    for(t in 1:length(states)) { # hap loop "to" this state
+    #for(state1 in states) { # hap loop
+        state1 <- states[t]
+        lsum <- -Inf
+        newtrans <- c()
+        newtmp <- c()
+        newprevfwd <- c()
+        for(f in 1:length(states)) { # "from" this state
+        #for(state0 in states) {
+            state0 <- states[f]
+            if( st$Xpop[t] == "p1" ) { # if "to" state is p1, use u1
+                u <- u1
+                nm <- n1
+            } 
+            if( st$Xpop[t] == "p2" ) { # if "to" state is p2, use u2,n2:
+                u <- 1 - u1 
+                nm <- n2
+            }
+            ##################
+            ### haplotype transitions: 
+            if( st$Xpop[f] != st$Xpop[t] ) { # anc AND hap switch:
+                trX <- (1-exp(-d*rho*T)) * u/nm
+            } else { # no ancestry switch
+                if( st$Xhap[f] != st$Xhap[t] ) { # no anc switch, hap switch
+                    trX <- exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+                }
+                if( st$Xhap[f] == st$Xhap[t] ) { # no anc switch, no hap switch
+                    trX <- exp(-d*rho*T) * exp(-d*rho) + exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+                }
+            }
+            ##################
+            ### gene conversion transitions:
+            if( st$Gpop[t] == "p1" ) {
+                u <- u1
+                nm <- n1
+            }
+            if( st$Gpop[t] == "p2" ) {
+                u <- 1 - u1
+                nm <- n2
+            }
+            # 3: Pr(G[j+1]=0 | G[j] = g):
+            a3 <- lam*(n1+n2)* (1-exp(-d*(gam*T+lam*(n1+n2))/(n1+n2))) / (gam*T+lam*(n1+n2))
+            # 5: Pr(G[j+1]=g' | G[j] = g):
+            a5 <- (lam*u*(n1+n2) * (exp(d*(-gam*T/(n1+n2)-lam))-1)) / ((n1+n2)*nm*lam + gam*T*nm) + (u-u*exp(-d*lam))/nm
+            # 1: Pr(G[j+1]=0 | G[j] = 0):
+            a1 <- exp(-lam*d) * exp(-gam*T*d/(n1+n2)) + a3
+            # 2: Pr(G[j+1]=g | G[j] = 0):
+            a2 <- exp(-lam*d) * (1-exp(-gam*T*d/(n1+n2))) *u/nm + a5
+            # 4: Pr(G[j+1]=g | G[j] = g):
+            a4 <- exp(-lam*d) + a5
+            if( st$Ghap[f] == st$Ghap[t] )              trG <- a4 # erroneously includes 0 -> 0; overwritten on next line
+            if( st$Ghap[f] == "0" & st$Ghap[t] == "0" ) trG <- a1
+            if( st$Ghap[f] == "0" & st$Ghap[t] != "0" ) trG <- a2
+            if( st$Ghap[f] != "0" & st$Ghap[t] == "0" ) trG <- a3
+            if( st$Ghap[f] != "0" & st$Ghap[t] != "0" & st$Ghap[f] != st$Ghap[t] ) trG <- a5
+            ###
+            tmp <- fwd[ f , j-1 ] + log( trX * trG )
+            if(tmp>-Inf) lsum <- tmp + log(1+exp(lsum-tmp))
+            newtrans <- c(newtrans, trX * trG )
+            newtmp <- c(newtmp,tmp)
+            newprevfwd <- c( newprevfwd, fwd[ f , j-1 ] )
+        } # end from/lsum loop
+        ### emission prob:
+        #if( ref[ st$Xhap[t] , j ] == obs[j] ) { # how should we determine emissions match/mismatch?? use gene conversion or transition state... they often differ!
+        if( ref[ sXG[cnt] , j ] == obs[j] ) {
+            e <- emit[1]
+            newemit <- rbind(newemit,c(st$Xhap[t],"match") )
+        } else {
+            e <- emit[2]
+            newemit <- rbind(newemit,c(st$Xhap[t],"mismatch") )
+        }
+        cnt <- cnt+1
+        fwd[ t , j ] <- log( e ) + lsum
+        #fwd[state1,j] <- log( emit[ emat[hname,j] ] ) + lsum
+    } # end to loop
+} # end site loop
+
+Pxa <- logsum(fwd[,S])
+
+
+all( fwd[,1] == fwd0[,1] )
+cbind( oldtmp, newtmp, oldtmp==newtmp )
+cbind( oldtrans, newtrans, oldtrans==newtrans )
+cbind( oldprevfwd, newprevfwd, oldprevfwd==newprevfwd )
+cbind( fwd0[,1], fwd[,1] )
 
 ########################################
 ########################################
@@ -267,6 +401,7 @@ cat("done in ",format(Sys.time()-start1),"\n")
 ##################################################
 ##################################################
 
+
 L <- 1
 emit <- c(
     match = (2*(n1+n2)*L+theta) / (2*((n1+n2)*L+theta)) , # match
@@ -279,6 +414,7 @@ emat[emat==FALSE] <- 2
 
 sXG <- sG
 sXG[sG=="0"] <- sX[sG=="0"]
+
 ####################
 # starting probablities for X and G:
 sprob <- numeric(length(states))
@@ -286,6 +422,7 @@ g0i <- grep("0",sG)
 g1i <- setdiff(1:length(states),g0i)
 #eIndx <- ifelse( c(sapply(refH1,'[',1),sapply(refH2,'[',1))[sX] ==obs[1], 1,2)
 eIndx <- emat[ sXG, 1 ]
+#eIndx <- emat[ st$Xhap, 1 ]
 # sprob[g0i] <- log( 1/(n1+n2) * (lam*(n1+n2)) / (lam*(n1+n2)+gam) * emit[eIndx[g0i]] )
 # sprob[g1i] <- log( 1/(n1+n2) * gam / ((n1+n2)*(lam*(n1+n2)+gam)) * emit[eIndx[g1i]] )
 # 
@@ -296,7 +433,7 @@ sprob[g1i] <- log( 1/(n1+n2) *
                   (gam*T) / ((n1+n2)*(lam*(n1+n2)+gam*T)) 
                   * emit[eIndx[g1i]] )
 ### add noise:
-sprob <- sprob -rnorm( length(states), sd=0.0001 )
+#sprob <- sprob -rnorm( length(states), sd=0.0001 )
 
 
 #sprob[8] <- sprob[8]+2
@@ -310,16 +447,25 @@ fwd <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states
 fwd[,1] <- sprob
 for(j in 2:S) {
     cnt <- 1
+    oldemit <- c()
     for(state1 in states) { # hap loop
         lsum <- -Inf
+        oldtrans <- c()
+        oldtmp <- c()
+        oldprevfwd <- c()
         for(state0 in states) {
             #tmp <- fwd[state0,j-1] + log( trans[state0,state1] )
+            cat( "state1=",state1, "state0=", state0, transL[[j-1]][state0,state1], "\n" )
             tmp <- fwd[state0,j-1] + log( transL[[j-1]][state0,state1] )
             if(tmp>-Inf) lsum <- tmp + log(1+exp(lsum-tmp))
+            oldtrans <- c(oldtrans, transL[[j-1]][state0,state1] )
+            oldtmp <- c(oldtmp, tmp ) #transL[[j-1]][state0,state1] )
+            oldprevfwd <- c( oldprevfwd, fwd[state0,j-1] )
         }
         hname <- sXG[cnt]; cnt <- cnt+1
         #fwd[state1,j] <- log( emit[ ifelse( c(sapply(refH1,'[',j),sapply(refH2,'[',j))[hname] ==obs[j],1,2) ] ) +lsum
         fwd[state1,j] <- log( emit[ emat[hname,j] ] ) + lsum
+        oldemit <- rbind(oldemit, c( sXG[cnt-1], c("match","mismatch")[ emat[hname,j] ] ) )
     }
 }
 Pxa <- logsum(fwd[,S])
