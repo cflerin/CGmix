@@ -149,6 +149,13 @@ param <- list(
     )
 
 
+save(fwd0, file="~/tmp/fwd.RData")
+save(bwd0, file="~/tmp/bwd.RData")
+save(vit0, file="~/tmp/vit.RData")
+load("~/tmp/fwd.RData")
+load("~/tmp/bwd.RData")
+load("~/tmp/vit.RData")
+
 ################################################################################
 L <- 1
 emit <- c(
@@ -216,6 +223,8 @@ for(j in 2:S) {
         for(f in 1:length(states)) { # "from" this state
         #for(state0 in states) {
             state0 <- states[f]
+            ##################
+            ### haplotype transitions: 
             if( st$Xpop[t] == "p1" ) { # if "to" state is p1, use u1
                 u <- u1
                 nm <- n1
@@ -224,8 +233,6 @@ for(j in 2:S) {
                 u <- 1 - u1 
                 nm <- n2
             }
-            ##################
-            ### haplotype transitions: 
             if( st$Xpop[f] != st$Xpop[t] ) { # anc AND hap switch:
                 trX <- (1-exp(-d*rho*T)) * u/nm
             } else { # no ancestry switch
@@ -291,6 +298,247 @@ cbind( oldtmp, newtmp, oldtmp==newtmp )
 cbind( oldtrans, newtrans, oldtrans==newtrans )
 cbind( oldprevfwd, newprevfwd, oldprevfwd==newprevfwd )
 cbind( fwd0[,1], fwd[,1] )
+
+
+
+##############################
+#bwd:
+bwd <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
+bwd[,S] <- 0
+for(j in (S-1):1) {
+    d <- diff( dvec[ (j) : (j+1)] )
+    for(f in 1:length(states)) {
+    #for(state1 in states) {
+        state1 <- states[f]
+        lsum <- -Inf
+        cnt <- 1
+        for(t in 1:length(states)) {
+        #for(state2 in states) {
+            state2 <- states[t]
+            ##################
+            ### haplotype transitions: 
+            if( st$Xpop[t] == "p1" ) { # if "to" state is p1, use u1
+                u <- u1
+                nm <- n1
+            } 
+            if( st$Xpop[t] == "p2" ) { # if "to" state is p2, use u2,n2:
+                u <- 1 - u1 
+                nm <- n2
+            }
+            if( st$Xpop[f] != st$Xpop[t] ) { # anc AND hap switch:
+                trX <- (1-exp(-d*rho*T)) * u/nm
+            } else { # no ancestry switch
+                if( st$Xhap[f] != st$Xhap[t] ) { # no anc switch, hap switch
+                    trX <- exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+                }
+                if( st$Xhap[f] == st$Xhap[t] ) { # no anc switch, no hap switch
+                    trX <- exp(-d*rho*T) * exp(-d*rho) + exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+                }
+            }
+            ##################
+            ### gene conversion transitions:
+            if( st$Gpop[t] == "p1" ) {
+                u <- u1
+                nm <- n1
+            }
+            if( st$Gpop[t] == "p2" ) {
+                u <- 1 - u1
+                nm <- n2
+            }
+            # 3: Pr(G[j+1]=0 | G[j] = g):
+            a3 <- lam*(n1+n2)* (1-exp(-d*(gam*T+lam*(n1+n2))/(n1+n2))) / (gam*T+lam*(n1+n2))
+            # 5: Pr(G[j+1]=g' | G[j] = g):
+            a5 <- (lam*u*(n1+n2) * (exp(d*(-gam*T/(n1+n2)-lam))-1)) / ((n1+n2)*nm*lam + gam*T*nm) + (u-u*exp(-d*lam))/nm
+            # 1: Pr(G[j+1]=0 | G[j] = 0):
+            a1 <- exp(-lam*d) * exp(-gam*T*d/(n1+n2)) + a3
+            # 2: Pr(G[j+1]=g | G[j] = 0):
+            a2 <- exp(-lam*d) * (1-exp(-gam*T*d/(n1+n2))) *u/nm + a5
+            # 4: Pr(G[j+1]=g | G[j] = g):
+            a4 <- exp(-lam*d) + a5
+            if( st$Ghap[f] == st$Ghap[t] )              trG <- a4 # erroneously includes 0 -> 0; overwritten on next line
+            if( st$Ghap[f] == "0" & st$Ghap[t] == "0" ) trG <- a1
+            if( st$Ghap[f] == "0" & st$Ghap[t] != "0" ) trG <- a2
+            if( st$Ghap[f] != "0" & st$Ghap[t] == "0" ) trG <- a3
+            if( st$Ghap[f] != "0" & st$Ghap[t] != "0" & st$Ghap[f] != st$Ghap[t] ) trG <- a5
+            ###
+            if( ref[ sXG[cnt] , j+1 ] == obs[j+1] ) {
+                e <- emit[1]
+                newemit <- rbind(newemit,c(st$Xhap[t],"match") )
+            } else {
+                e <- emit[2]
+                newemit <- rbind(newemit,c(st$Xhap[t],"mismatch") )
+            }
+            cnt <- cnt+1
+            tmp <- bwd[t,j+1] + log( trX * trG * e )
+            if(tmp>-Inf) lsum <- tmp + log(1+exp(lsum-tmp))
+        }
+        #bwd[state1,j] <- lsum
+        bwd[f,j] <- lsum
+    }
+} # seq loop j
+
+Pxb <- bwd[1,1] + fwd[,1]; cnt <- 2
+if(length(states)>1) {
+    for(state1 in states[-1]) {
+        tmp <- bwd[state1,1] + fwd[cnt,1]
+        if(tmp>-Inf) Pxb <- tmp + log(1+exp(Pxb-tmp))
+        cnt <- cnt+1
+    }
+}
+Pxa-Pxb
+### posterior decoding:
+pprob <- ( fwd+bwd - Pxa )
+for(i in 1:ncol(pprob)) {
+    pprob[,i] <- pprob[,i]-max(pprob[,i])
+}
+pprob <- exp(pprob)
+for(i in 1:ncol(pprob)) {
+    pprob[,i] <- pprob[,i]/sum(pprob[,i])
+}
+path <- apply(pprob,2,max)
+names(path) <- states[ apply(pprob,2,which.max) ]
+
+##############################
+# viterbi:
+vit <- matrix( as.numeric(NA), nrow=length(states), ncol=S, dimnames=list(states=states, obs=obs) )
+# initial state:
+vit[,1] <- fwd[,1]
+# recursion:
+for(j in 2:S) {
+    d <- diff( dvec[ (j-1) : (j)] )
+    cnt <- 1
+    for(t in 1:length(states)) {
+        state1 <- states[t]
+        tmp <- numeric(length(states))
+        for(f in 1:length(states)) { # "from" this state
+            state0 <- states[f]
+            ##################
+            ### haplotype transitions: 
+            if( st$Xpop[t] == "p1" ) { # if "to" state is p1, use u1
+                u <- u1
+                nm <- n1
+            } 
+            if( st$Xpop[t] == "p2" ) { # if "to" state is p2, use u2,n2:
+                u <- 1 - u1 
+                nm <- n2
+            }
+            if( st$Xpop[f] != st$Xpop[t] ) { # anc AND hap switch:
+                trX <- (1-exp(-d*rho*T)) * u/nm
+            } else { # no ancestry switch
+                if( st$Xhap[f] != st$Xhap[t] ) { # no anc switch, hap switch
+                    trX <- exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+                }
+                if( st$Xhap[f] == st$Xhap[t] ) { # no anc switch, no hap switch
+                    trX <- exp(-d*rho*T) * exp(-d*rho) + exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+                }
+            }
+            ##################
+            ### gene conversion transitions:
+            if( st$Gpop[t] == "p1" ) {
+                u <- u1
+                nm <- n1
+            }
+            if( st$Gpop[t] == "p2" ) {
+                u <- 1 - u1
+                nm <- n2
+            }
+            # 3: Pr(G[j+1]=0 | G[j] = g):
+            a3 <- lam*(n1+n2)* (1-exp(-d*(gam*T+lam*(n1+n2))/(n1+n2))) / (gam*T+lam*(n1+n2))
+            # 5: Pr(G[j+1]=g' | G[j] = g):
+            a5 <- (lam*u*(n1+n2) * (exp(d*(-gam*T/(n1+n2)-lam))-1)) / ((n1+n2)*nm*lam + gam*T*nm) + (u-u*exp(-d*lam))/nm
+            # 1: Pr(G[j+1]=0 | G[j] = 0):
+            a1 <- exp(-lam*d) * exp(-gam*T*d/(n1+n2)) + a3
+            # 2: Pr(G[j+1]=g | G[j] = 0):
+            a2 <- exp(-lam*d) * (1-exp(-gam*T*d/(n1+n2))) *u/nm + a5
+            # 4: Pr(G[j+1]=g | G[j] = g):
+            a4 <- exp(-lam*d) + a5
+            if( st$Ghap[f] == st$Ghap[t] )              trG <- a4 # erroneously includes 0 -> 0; overwritten on next line
+            if( st$Ghap[f] == "0" & st$Ghap[t] == "0" ) trG <- a1
+            if( st$Ghap[f] == "0" & st$Ghap[t] != "0" ) trG <- a2
+            if( st$Ghap[f] != "0" & st$Ghap[t] == "0" ) trG <- a3
+            if( st$Ghap[f] != "0" & st$Ghap[t] != "0" & st$Ghap[f] != st$Ghap[t] ) trG <- a5
+            ###
+            tmp[f] <- vit[f,j-1] + log( trX * trG )
+        } # end from loop
+        vmax <- max(tmp)
+        if( ref[ sXG[cnt] , j ] == obs[j] ) {
+            e <- emit[1]
+        } else {
+            e <- emit[2]
+        }
+        cnt <- cnt+1
+        vit[t,j] <- log( e ) + vmax
+    } # end to loop
+} # end site loop
+# termination:
+vpath <- rep(NA,length(obs))
+vpath[S] <- states[ which.max( vit[,length(obs)] ) ]
+# traceback:
+for(j in (S-1):1 ) {
+    # find previous max state:
+    t <- which( states == vpath[j+1] )
+    state1 <- states[t]
+    tmp <- numeric(length(states))
+    for(f in 1:length(states)) { # "from" this state
+        state0 <- states[f]
+        ##################
+        ### haplotype transitions: 
+        if( st$Xpop[t] == "p1" ) { # if "to" state is p1, use u1
+            u <- u1
+            nm <- n1
+        } 
+        if( st$Xpop[t] == "p2" ) { # if "to" state is p2, use u2,n2:
+            u <- 1 - u1 
+            nm <- n2
+        }
+        if( st$Xpop[f] != st$Xpop[t] ) { # anc AND hap switch:
+            trX <- (1-exp(-d*rho*T)) * u/nm
+        } else { # no ancestry switch
+            if( st$Xhap[f] != st$Xhap[t] ) { # no anc switch, hap switch
+                trX <- exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+            }
+            if( st$Xhap[f] == st$Xhap[t] ) { # no anc switch, no hap switch
+                trX <- exp(-d*rho*T) * exp(-d*rho) + exp(-d*rho*T) * (1-exp(-d*rho))/nm + (1-exp(-d*rho*T))*u/nm
+            }
+        }
+        ##################
+        ### gene conversion transitions:
+        if( st$Gpop[t] == "p1" ) {
+            u <- u1
+            nm <- n1
+        }
+        if( st$Gpop[t] == "p2" ) {
+            u <- 1 - u1
+            nm <- n2
+        }
+        # 3: Pr(G[j+1]=0 | G[j] = g):
+        a3 <- lam*(n1+n2)* (1-exp(-d*(gam*T+lam*(n1+n2))/(n1+n2))) / (gam*T+lam*(n1+n2))
+        # 5: Pr(G[j+1]=g' | G[j] = g):
+        a5 <- (lam*u*(n1+n2) * (exp(d*(-gam*T/(n1+n2)-lam))-1)) / ((n1+n2)*nm*lam + gam*T*nm) + (u-u*exp(-d*lam))/nm
+        # 1: Pr(G[j+1]=0 | G[j] = 0):
+        a1 <- exp(-lam*d) * exp(-gam*T*d/(n1+n2)) + a3
+        # 2: Pr(G[j+1]=g | G[j] = 0):
+        a2 <- exp(-lam*d) * (1-exp(-gam*T*d/(n1+n2))) *u/nm + a5
+        # 4: Pr(G[j+1]=g | G[j] = g):
+        a4 <- exp(-lam*d) + a5
+        if( st$Ghap[f] == st$Ghap[t] )              trG <- a4 # erroneously includes 0 -> 0; overwritten on next line
+        if( st$Ghap[f] == "0" & st$Ghap[t] == "0" ) trG <- a1
+        if( st$Ghap[f] == "0" & st$Ghap[t] != "0" ) trG <- a2
+        if( st$Ghap[f] != "0" & st$Ghap[t] == "0" ) trG <- a3
+        if( st$Ghap[f] != "0" & st$Ghap[t] != "0" & st$Ghap[f] != st$Ghap[t] ) trG <- a5
+        ###
+        tmp[f] <- vit[f,j] + log( trX * trG )
+    } # end from loop
+    vpath[j] <- states[ which.max(tmp) ]
+    #vpath[j] <- states[ which.max( vit[states,j] + log(transL[[j]][states,vpath[j+1]]) ) ]
+}
+cat("done in ",format(Sys.time()-start1),"\n")
+
+
+path <- numeric(S)
+names(path) <- vpath
+
+
 
 ########################################
 ########################################
