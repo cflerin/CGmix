@@ -9,46 +9,37 @@
 
 using namespace std;
 
-
-void generateStates(const vector<vector<string> >& hapInfo, vector<vector<string> > &st ) {
+void generateStates(const vector<vector<string> >& hapInfo, struct states& st ) {
     int nrow = hapInfo.size() - 2 ;
-    // cout << nrow << endl;
-    vector<string> Xpop;
-    vector<string> Xhap;
-    vector<string> Gpop;
-    vector<string> Ghap;
     // G null states:
     for (int j=0; j < nrow; j++) { 
         // cout << hapInfo[j][0] << "\t" << hapInfo[j][1] << "\t" << "0" << "\t" << "0" << "\t" << endl;
-        Xhap.push_back( hapInfo[j][0] );
-        Xpop.push_back( hapInfo[j][1] );
-        Ghap.push_back( "0" );
-        Gpop.push_back( "0" );
+        st.Xhap.push_back( hapInfo[j][0] );
+        st.Xpop.push_back( hapInfo[j][1] );
+        st.Xindx.push_back( j ); // check if this is right
+        st.Ghap.push_back( "0" );
+        st.Gpop.push_back( "0" );
+        st.Gindx.push_back( j ); // check if this is right
     }
     // All combinations of X and G:
     for(int i=0; i < nrow; i++) {
         for (int j=0; j < nrow; j++) {
             // cout << hapInfo[j][0] << "\t" << hapInfo[j][1] << "\t" << hapInfo[i][0] << "\t" << hapInfo[i][1] << "\t" << endl;
-            Xhap.push_back( hapInfo[j][0] );
-            Xpop.push_back( hapInfo[j][1] );
-            Ghap.push_back( hapInfo[i][0] );
-            Gpop.push_back( hapInfo[i][1] );
+            st.Xhap.push_back( hapInfo[j][0] );
+            st.Xpop.push_back( hapInfo[j][1] );
+            st.Xindx.push_back( j );
+            st.Ghap.push_back( hapInfo[i][0] );
+            st.Gpop.push_back( hapInfo[i][1] );
+            st.Gindx.push_back( i );
         }
     }
-    st.push_back( Xpop );
-    st.push_back( Xhap );
-    st.push_back( Gpop );
-    st.push_back( Ghap );
     // state concatenation:
-    vector<string> states;
-    nrow = st[0].size();
+    nrow = st.Xhap.size();
     for(int i=0; i < nrow; i++) {
         string tmp;
-        tmp = Xpop[i] + Xhap[i] + Gpop[i] + Ghap[i];
-        states.push_back( tmp );
+        tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
+        st.states.push_back( tmp );
     }
-    st.push_back( states );
-    // cout << states.size() << "\t" << Xpop.size() << endl;
 }
 
 // void getXtrans(int to, int from, vector<vector<string> > st, vector<double> param ) {
@@ -56,6 +47,25 @@ void generateStates(const vector<vector<string> >& hapInfo, vector<vector<string
 // 
 // void getGtrans(int to, int from, vector<vector<string> > st, vector<double> param ) {
 // }
+
+void forward( 
+        const vector<vector<int> >& sites,
+        const struct parameters& param,
+        const struct emissions& emit,
+        const struct states& st,
+        const vector<int>& obs,
+        vector<vector<double> > fwd ) {
+    // starting prob: 
+    for(int i=0; i < st.states.size(); i++) {
+        double e;
+        if( sites[ st.Gindx[i] ][0] == obs[0] ) {
+            e = emit.match;
+        } else {
+            e = emit.mismatch;
+        }
+        // cout << e << endl;
+    }
+}
 
 
 

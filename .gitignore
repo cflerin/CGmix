@@ -1,3 +1,6 @@
-GCmix
+CGmix
 *.d
 *.o
+admixSampleData.*
+*.swp
+old/

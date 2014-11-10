@@ -23,7 +23,7 @@ void print1Dvec(const vector<int>& vec) {
     }
 }
 
-void print2Dvec(const vector<vector<double> >& vec) {
+void print2Dvec(const vector<vector<int> >& vec) {
 for(int i=0; i < vec.size(); i++) {
       for (int j=0; j < vec[i].size(); j++)
         cout << vec[i][j] << " "; 
@@ -41,18 +41,18 @@ for(int i=0; i < vec.size(); i++) {
 
 
 
-void readSites(const string &fname, vector<vector<double> > &sites ) {
+void readSites(const string &fname, vector<vector<int> > &sites ) {
 	ifstream file ( fname.c_str() );
 	if (file.is_open()) {
 		while (file.good()) {
-			vector<double> row;
+			vector<int> row;
 			string line;
 			getline(file, line);
 			stringstream ss(line);
 			string field;
 			while (getline(ss, field, '\t')) {
 				stringstream fs(field);
-				double f = 0.0;
+				int f = 0;
 				fs >> f;
 				row.push_back(f);
 			}

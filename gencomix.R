@@ -237,7 +237,7 @@ states <- st$states
 
 write.table( rbind(ref,obs), file="src/admixSampleData.sites", sep="\t", col.names=FALSE,row.names=FALSE)
 write.table( matrix(dvec,nrow=1), file="src/admixSampleData.locs", sep="\t", col.names=FALSE,row.names=FALSE)
-write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file="src/admixSampleData.hapnames", sep="\t", col.names=FALSE,row.names=FALSE)
+write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file="src/admixSampleData.hapnames", sep="\t", col.names=FALSE,row.names=FALSE,quote=FALSE)
 ##############################
 # how to determine which haplotype to use for the emissions match/mismatch?
 # either use Xstate or G state? or
