@@ -11,6 +11,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <limits>
 
@@ -37,16 +38,21 @@ class hmmStates
         vector<int> Xindx, Gindx;
 };
 
-void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st ) ;
+void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st );
+
+void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX );
+void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG );
 
 void forward( 
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& param,
+        const struct parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
-        vector<vector<double> > fwd );
+        vector<vector<double> >& fwd );
+
+void printMat( const vector<vector<double> >& mat );
 
 #endif
 

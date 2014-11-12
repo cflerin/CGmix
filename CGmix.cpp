@@ -64,6 +64,8 @@ int main(int argc, char *argv[]) {
     vector<vector<double> > fwd(st.states.size(), vector<double>(param.S, 0));
     forward( sites, locs, param, emit, st, obs, fwd );
 
+    printMat( fwd );
+
 }
 
 

@@ -44,21 +44,74 @@ void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st 
     }
 }
 
-// void getXtrans(int to, int from, vector<vector<string> > st, vector<double> param ) {
-// }
-// 
-// void getGtrans(int to, int from, vector<vector<string> > st, vector<double> param ) {
-// }
+void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX ) {
+    double u;
+    int nm;
+    if( st.Xpop[to] == "p1" ) {
+        u = p.u1;
+        nm = p.n1;
+    }
+    if( st.Xpop[to] == "p2" ) {
+        u = 1.0 - p.u1;
+        nm = p.n2;
+    }
+    // cout << "From " << st.Xhap[from] << " To " << st.Xhap[to] ;
+    // cout << " | " << u << " " << nm << " ";
+    if( st.Xpop[from] != st.Xpop[to] ) { // ancestry and haplotype switch:
+        // cout << " anc sw! ";
+        trX = ( 1.0 - exp( -d * p.rho * p.T ) ) * u/nm;
+    } else { // no ancestry switch
+        if( st.Xhap[from] != st.Xhap[to] ) { // hap switch
+            // cout << " hap sw! ";
+            trX = exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
+                  ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
+        }
+        if( st.Xhap[from] == st.Xhap[to] ) { // no hap switch
+            // cout << " cont! ";
+            trX = exp( -d * p.rho * p.T ) * exp( -d * p.rho ) + 
+                  exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
+                  ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
+        }
+    }
+}
+
+void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG ) {
+    double u, a1, a2, a3, a4, a5;
+    int nm;
+    if( st.Gpop[to] == "p1" ) {
+        u = p.u1;
+        nm = p.n1;
+    }
+    if( st.Gpop[to] == "p2" ) {
+        u = 1.0 - p.u1;
+        nm = p.n2;
+    }
+    // 3: Pr(G[j+1]=0 | G[j] = g):
+    a3 = p.lam * (p.n1 + p.n2) * ( 1 - exp( -d * (p.gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (p.gam * p.T + p.lam * (p.n1 + p.n2) ) ; 
+    // 5: Pr(G[j+1]=g' | G[j] = g):
+    a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-p.gam * p.T / (p.n1 + p.n2) - p.lam)) - 1)) / ((p.n1 + p.n2) * nm * p.lam + p.gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
+    // 1: Pr(G[j+1]=0 | G[j] = 0):
+    a1 = exp( -p.lam * d ) * exp( -p.gam * p.T * d / (p.n1 + p.n2)) + a3 ;
+    // 2: Pr(G[j+1]=g | G[j] = 0):
+    a2 = exp( -p.lam * d ) * ( 1 - exp( -p.gam * p.T * d / (p.n1 + p.n2))) * u / nm + a5 ;
+    // 4: Pr(G[j+1]=g | G[j] = g):
+    a4 = exp( -p.lam * d ) + a5 ;
+    if( st.Ghap[from] == st.Ghap[to] )              trG <- a4; // erroneously includes 0 -> 0; overwritten on next line
+    if( st.Ghap[from] == "0" & st.Ghap[to] == "0" ) trG <- a1;
+    if( st.Ghap[from] == "0" & st.Ghap[to] != "0" ) trG <- a2;
+    if( st.Ghap[from] != "0" & st.Ghap[to] == "0" ) trG <- a3;
+    if( st.Ghap[from] != "0" & st.Ghap[to] != "0" & st.Ghap[from] != st.Ghap[to] ) trG <- a5;
+}
 
 void forward( 
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& param,
+        const struct parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
-        vector<vector<double> > fwd ) {
-    cout << fwd.size() << " " << fwd[0].size() << endl;
+        vector<vector<double> >& fwd ) {
+    // cout << fwd.size() << " " << fwd[0].size() << endl;
     // starting prob: 
     double e;
     for(int i=0; i < st.states.size(); i++) {
@@ -67,11 +120,10 @@ void forward(
         } else {
             e = emit.mismatch;
         }
-        // cout << e << endl;
         if( st.Ghap[i] == "0" ) {
-            fwd[i][0] = log( 1.0 / ( param.n1 + param.n2 ) * ( param.lam * ( param.n1 + param.n2 ) + param.gam * param.T) * e );
+            fwd[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) + p.gam * p.T) * e );
         } else {
-            fwd[i][0] = log( 1.0 / ( param.n1 + param.n2 ) * ( param.gam * param.T ) / ( ( param.n1 + param.n2 ) * ( param.lam * (param.n1 + param.n2 ) + param.gam * param.T ) ) * e );
+            fwd[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) * e );
         }
     }
     int d, cnt;
@@ -82,10 +134,9 @@ void forward(
         for(int t=0; t < st.states.size(); t++) {
             lsum = negInf;
             for(int f=0; f < st.states.size(); f++) {
-                // trX = getXtrans( f, t, st, param );
-                trX = 0.05;
-                // trG = getGtrans( f, t, st, param );
-                trG = 0.06;
+                getXtrans( t, f, d, st, p, trX);
+                // cout << "\t" <<trX << "\t" << trG << endl;
+                getGtrans( t, f, d, st, p, trG);
                 tmp = fwd[f][j-1] + log( trX * trG );
                 if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
             } // end 'from' loop
@@ -96,11 +147,21 @@ void forward(
                 e = emit.mismatch;
             }
             fwd[t][j] = log( e ) + lsum;
+            // cout << fwd[t][j] << "\t";
         } // end 'to' loop
+        // cout << endl;
     } // end j site loop
 }
 
 
+void printMat( const vector<vector<double> >& mat ) {
+    for(int i=0; i < mat.size(); i++ ) {
+        for(int j=0; j < mat[0].size(); j++ ) {
+            cout << setprecision(15) << mat[i][j] << " ";
+        }
+        cout << endl;
+    }
+}
 
 
 
