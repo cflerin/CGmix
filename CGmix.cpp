@@ -17,19 +17,23 @@ int main(int argc, char *argv[]) {
     // read in data:
     vector<vector<int> > sites;
     readSites( "admixSampleData.sites", sites );
+    cout << "Read " << sites.size() << " haplotypes with " << sites[0].size() << " sites:" << endl;
     print2Dvec( sites );
 
     vector<int> locs;
     readLocs( "admixSampleData.locs", locs);
+    cout << endl << "Read " << locs.size() << " physical positions:" << endl;
     print1Dvec( locs );
+    cout << endl;
 
     vector<vector<string> > hapInfo;
     readHapInfo( "admixSampleData.hapnames", hapInfo );
+    cout << endl << "Read " << hapInfo.size() << " haplotype definitions:" << endl;
     print2DvecString( hapInfo );
 
-    states st;
+    hmmStates st;
     generateStates( hapInfo, st );
-    cout << "Generated " << st.states.size() << " states" << endl;
+    cout << endl << "Generated " << st.states.size() << " states" << endl << endl;
 
     // set/get parameters:
     parameters param;
@@ -48,7 +52,7 @@ int main(int argc, char *argv[]) {
     emit.mismatch = param.theta / ( 2.0 * ( ( param.n1 + param.n2 ) + param.theta ) );
 
     vector<int> obs;
-    for(int i=0; i < sites.size()-1; i++) {
+    for(int i=0; i < sites.size(); i++) {
         if( hapInfo[i][0] == "obs" ) {
             for(int j=0; j < param.S; j++) {
                 // cout << sites[i][j] << endl;
@@ -57,8 +61,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    vector<vector<double> > fwd;
-    forward( sites, param, emit, st, obs, fwd );
+    vector<vector<double> > fwd(st.states.size(), vector<double>(param.S, 0));
+    forward( sites, locs, param, emit, st, obs, fwd );
 
 }
 

@@ -11,6 +11,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <cmath>
+#include <limits>
 
 using namespace std;
 
@@ -26,18 +28,23 @@ struct parameters {
 struct emissions {
     double match, mismatch;
 };
-struct states {
-    vector<string> Xpop, Xhap, Gpop, Ghap, states;
-    vector<int> Xindx, Gindx;
+class hmmStates 
+{
+    public:
+        hmmStates(){};
+        ~hmmStates(){};
+        vector<string> Xpop, Xhap, Gpop, Ghap, states;
+        vector<int> Xindx, Gindx;
 };
 
-void generateStates(const vector<vector<string> >& hapInfo, struct states& st ) ;
+void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st ) ;
 
 void forward( 
         const vector<vector<int> >& sites,
+        const vector<int>& dvec,
         const struct parameters& param,
         const struct emissions& emit,
-        const struct states& st,
+        const class hmmStates& st,
         const vector<int>& obs,
         vector<vector<double> > fwd );
 

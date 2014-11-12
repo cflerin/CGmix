@@ -48,6 +48,8 @@ void readSites(const string &fname, vector<vector<int> > &sites ) {
 			vector<int> row;
 			string line;
 			getline(file, line);
+            if( line == "" )
+                continue;
 			stringstream ss(line);
 			string field;
 			while (getline(ss, field, '\t')) {
@@ -56,8 +58,6 @@ void readSites(const string &fname, vector<vector<int> > &sites ) {
 				fs >> f;
 				row.push_back(f);
 			}
-			// write_vec(row);
-			// cout << endl;
 			sites.push_back(row);
 		}
 		file.close();
@@ -72,6 +72,8 @@ void readHapInfo(const string &fname, vector<vector<string> > &hapInfo ) {
 			vector<string> row;
 			string line;
 			getline(file, line);
+            if( line == "" )
+                continue;
 			stringstream ss(line);
 			string field;
 			while (getline(ss, field, '\t')) {
@@ -80,8 +82,6 @@ void readHapInfo(const string &fname, vector<vector<string> > &hapInfo ) {
 				fs >> f;
 				row.push_back(f);
 			}
-			//write_vec(row);
-			// cout << endl;
 			hapInfo.push_back(row);
 		}
 		file.close();
@@ -91,21 +91,20 @@ void readHapInfo(const string &fname, vector<vector<string> > &hapInfo ) {
 
 void readLocs(const string &fname, vector<int> &locs ) {
 	ifstream file ( fname.c_str() );
-	vector<double> row;
 	if (file.is_open()) {
 		while (file.good()) {
 			string line;
 			getline(file, line);
+            if( line == "" )
+                continue;
 			stringstream ss(line);
 			string field;
 			while (getline(ss, field, '\t')) {
 				stringstream fs(field);
 				int f = 0;
 				fs >> f;
-				row.push_back(f);
+				locs.push_back(f);
 			}
-			// write_vec(row);
-			// cout << endl;
 		}
 		file.close();
 	} else
