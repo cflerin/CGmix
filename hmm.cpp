@@ -40,7 +40,7 @@ void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st 
         tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
         st.states.push_back( tmp );
         // cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
-        //     st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
+        //      st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
     }
 }
 
@@ -96,11 +96,11 @@ void getGtrans(const int& to, const int& from, const int& d, const class hmmStat
     a2 = exp( -p.lam * d ) * ( 1 - exp( -p.gam * p.T * d / (p.n1 + p.n2))) * u / nm + a5 ;
     // 4: Pr(G[j+1]=g | G[j] = g):
     a4 = exp( -p.lam * d ) + a5 ;
-    if( st.Ghap[from] == st.Ghap[to] )              trG <- a4; // erroneously includes 0 -> 0; overwritten on next line
-    if( st.Ghap[from] == "0" & st.Ghap[to] == "0" ) trG <- a1;
-    if( st.Ghap[from] == "0" & st.Ghap[to] != "0" ) trG <- a2;
-    if( st.Ghap[from] != "0" & st.Ghap[to] == "0" ) trG <- a3;
-    if( st.Ghap[from] != "0" & st.Ghap[to] != "0" & st.Ghap[from] != st.Ghap[to] ) trG <- a5;
+    if( st.Ghap[from] == st.Ghap[to] )              trG = a4; // erroneously includes 0 -> 0; overwritten on next line
+    if( ( st.Ghap[from] == "0" ) & ( st.Ghap[to] == "0" ) ) trG = a1;
+    if( st.Ghap[from] == "0" & st.Ghap[to] != "0" ) trG = a2;
+    if( st.Ghap[from] != "0" & st.Ghap[to] == "0" ) trG = a3;
+    if( st.Ghap[from] != "0" & st.Ghap[to] != "0" & st.Ghap[from] != st.Ghap[to] ) trG = a5;
 }
 
 void forward( 
@@ -121,12 +121,12 @@ void forward(
             e = emit.mismatch;
         }
         if( st.Ghap[i] == "0" ) {
-            fwd[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) + p.gam * p.T) * e );
+            fwd[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) * e );
         } else {
             fwd[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) * e );
         }
     }
-    int d, cnt;
+    int d;
     double lsum, tmp, trX, trG;
     double negInf = - std::numeric_limits<double>::infinity();
     for(int j=1; j < sites[0].size() ; j++ ) {
@@ -153,6 +153,44 @@ void forward(
     } // end j site loop
 }
 
+void backward(
+		const vector<vector<int> >& sites,
+		const vector<int>& dvec,
+		const struct parameters& p,
+		const struct emissions& emit,
+		const class hmmStates& st,
+		const vector<int>& obs,
+		vector<vector<double> >& bwd ) {
+	// starting prob:
+	for(int i=0; i < st.states.size(); i++) {
+		bwd[i][ bwd[i].size()-1 ] = 0.0;
+	}
+	cout << "done" << endl;
+	double e, lsum, tmp, trX, trG;
+	double negInf = - std::numeric_limits<double>::infinity();
+	int d;
+	cout << "start" << endl;
+	for(int j = sites[0].size()-2; j >= 0 ; j-- ) {
+		d = dvec[j+1] - dvec[j];
+		for(int f=0; f < st.states.size(); f++ ) {
+			lsum = negInf;
+			for(int t=0; t < st.states.size(); t++ ) {
+				getXtrans( t, f, d, st, p, trX);
+				getGtrans( t, f, d, st, p, trG);
+				// emission prob:
+				if( sites[ st.Gindx[t] ][j+1] == obs[j+1] ) {
+					e = emit.match;
+				} else {
+					e = emit.mismatch;
+				}
+				tmp = bwd[t][j+1] + log( trX * trG * e );
+				if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
+			} // t loop
+			bwd[f][j] = lsum;
+		} // f loop
+	} // j loop
+}
+
 
 void printMat( const vector<vector<double> >& mat ) {
     for(int i=0; i < mat.size(); i++ ) {
@@ -163,6 +201,36 @@ void printMat( const vector<vector<double> >& mat ) {
     }
 }
 
+void logSumExp( const vector<double>& vec, double& lse ) {
+	double max = - std::numeric_limits<double>::infinity();
+	lse = 0.0;
+	for(int i=0; i < vec.size(); i++ ) {
+		if( vec[i] > max )
+			max = vec[i];
+	}
+	for(int i=0; i < vec.size(); i++ )
+		lse += exp( vec[i] - max );
+	lse = max + log( lse) ;
+}
 
+void postDecode(
+		const vector<vector<double> >& fwd,
+		const vector<vector<double> >& bwd,
+		vector<vector<double> >& pprob
+		) {
+	vector<double> sprob;
+	for(int i=0; i < fwd.size(); i++) {
+		sprob.push_back( fwd[i][ fwd[i].size()-1 ] );
+		//cout << fwd[i][ fwd[i].size()-1 ] << " " << endl;
+	}
+	double Pxa;
+	logSumExp( sprob, Pxa );
+	cout << Pxa << endl;
+	// backward:
+	double Pxb = 0.0;
+	for(int i=0; i < fwd.size(); i++ ) {
+		Pxb += bwd[0][0] + fwd[0][ fwd[0].size()-1 ];
+	}
+}
 
 

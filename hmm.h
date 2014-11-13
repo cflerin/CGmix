@@ -52,8 +52,22 @@ void forward(
         const vector<int>& obs,
         vector<vector<double> >& fwd );
 
-void printMat( const vector<vector<double> >& mat );
+void backward(
+		const vector<vector<int> >& sites,
+		const vector<int>& dvec,
+		const struct parameters& p,
+		const struct emissions& emit,
+		const class hmmStates& st,
+		const vector<int>& obs,
+		vector<vector<double> >& bwd );
 
+void printMat( const vector<vector<double> >& mat );
+void logSumExp( const vector<double>& vec, double& lse );
+void postDecode(
+		const vector<vector<double> >& fwd,
+		const vector<vector<double> >& bwd,
+		vector<vector<double> >& pprob
+		);
 #endif
 
 

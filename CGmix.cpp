@@ -63,9 +63,22 @@ int main(int argc, char *argv[]) {
 
     vector<vector<double> > fwd(st.states.size(), vector<double>(param.S, 0));
     forward( sites, locs, param, emit, st, obs, fwd );
+    //printMat( fwd );
+    vector<double> sprob;
+    for(int i=0; i < fwd.size(); i++) {
+    	sprob.push_back( fwd[i][ fwd[i].size()-1 ] );
+    	//cout << fwd[i][ fwd[i].size()-1 ] << " " << endl;
+    }
+    double lsum;
+    logSumExp( sprob, lsum );
+    cout << "lsum= " << lsum << endl;
 
-    printMat( fwd );
+    vector<vector<double> > bwd(st.states.size(), vector<double>(param.S, 0));
+    backward( sites, locs, param, emit, st, obs, bwd );
+    //printMat( bwd );
 
+    vector<vector<double> > pprob;
+    postDecode( fwd, bwd, pprob);
 }
 
 

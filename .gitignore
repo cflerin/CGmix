@@ -2,6 +2,6 @@ CGmix
 *.d
 *.o
 admixSampleData.*
-*.swp
+*swp
 old/
 distributions.R
