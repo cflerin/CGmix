@@ -77,8 +77,12 @@ int main(int argc, char *argv[]) {
     backward( sites, locs, param, emit, st, obs, bwd );
     //printMat( bwd );
 
-    vector<vector<double> > pprob;
+    vector<vector<double> > pprob(st.states.size(), vector<double>(param.S, 0));
     postDecode( fwd, bwd, pprob);
+
+    vector<vector<double> > vit;
+    vector<string> vpath( 20 );
+    // viterbi( sites, locs, param, emit, st, obs, vit, vpath );
 }
 
 

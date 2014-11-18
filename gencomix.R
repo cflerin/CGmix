@@ -324,7 +324,7 @@ for(j in (S-1):1) {
 } # seq loop j
 cat("done in ",format(Sys.time()-start1),"\n")
 
-Pxb <- bwd[1,1] + fwd[,1]; cnt <- 2
+Pxb <- bwd[1,1] + fwd[1,1]; cnt <- 2
 if(length(states)>1) {
     for(state1 in states[-1]) {
         tmp <- bwd[state1,1] + fwd[cnt,1]

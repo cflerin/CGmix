@@ -68,6 +68,20 @@ void postDecode(
 		const vector<vector<double> >& bwd,
 		vector<vector<double> >& pprob
 		);
+
+void viterbi(
+		const vector<vector<int> >& sites,
+		const vector<int>& dvec,
+		const struct parameters& p,
+		const struct emissions& emit,
+		const class hmmStates& st,
+		const vector<int>& obs,
+		vector<vector<double> >& vit,
+		vector<string>& vpath );
+
+void max( const vector<double>& vec, double maxelement );
+
+
 #endif
 
 
