@@ -76,8 +76,10 @@ void viterbi(
 		const struct emissions& emit,
 		const class hmmStates& st,
 		const vector<int>& obs,
+        const vector<vector<double> >& pprob,
 		vector<vector<double> >& vit,
-		vector<string>& vpath );
+		vector<string>& vpath,
+		vector<double>& vprob );
 
 void max( const vector<double>& vec, double maxelement );
 

@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 
     vector<vector<double> > fwd(st.states.size(), vector<double>(param.S, 0));
     forward( sites, locs, param, emit, st, obs, fwd );
-    //printMat( fwd );
+    // printMat( fwd );
     vector<double> sprob;
     for(int i=0; i < fwd.size(); i++) {
     	sprob.push_back( fwd[i][ fwd[i].size()-1 ] );
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     }
     double lsum;
     logSumExp( sprob, lsum );
-    cout << "lsum= " << lsum << endl;
+    // cout << "lsum= " << lsum << endl;
 
     vector<vector<double> > bwd(st.states.size(), vector<double>(param.S, 0));
     backward( sites, locs, param, emit, st, obs, bwd );
@@ -79,10 +79,33 @@ int main(int argc, char *argv[]) {
 
     vector<vector<double> > pprob(st.states.size(), vector<double>(param.S, 0));
     postDecode( fwd, bwd, pprob);
+    // printMat( pprob );
 
-    vector<vector<double> > vit;
-    vector<string> vpath( 20 );
-    // viterbi( sites, locs, param, emit, st, obs, vit, vpath );
+    vector<vector<double> > vit(st.states.size(), vector<double>(param.S, 0));
+    vector<string> vpath( sites[0].size() );
+    vector<double> vprob( sites[0].size() , 0.0);
+    viterbi( sites, locs, param, emit, st, obs, pprob, vit, vpath, vprob );
+    // printMat( vit );
+    // print1DvecString(vpath);
+    cout << endl;
+
+    // output Viterbi path and probabilites:
+    vector<double> gcprob( sites[0].size(), 0.0 );
+    double csum;
+    cout << "site\tppos\tpath\tpathProb\tGCProb" << endl;
+    for(int j=0; j < pprob[0].size(); j++ ) {
+        csum =0.0;
+        for(int i=0; i < st.states.size(); i++ ) {
+            if( st.Ghap[i] == "0" ) 
+                continue;
+            csum += pprob[i][j];
+        }
+        gcprob[j] = 1.0 - csum;
+        // cout << j << "\t" << 1-gcprob[j] << " " << endl;
+        cout << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << vprob[j] << "\t" << 1-gcprob[j] << endl;
+    }
+
+
 }
 
 

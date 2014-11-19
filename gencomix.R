@@ -419,9 +419,9 @@ split.screen( rbind(
     ))
 screen(2)
 par( mar=c(5,5,0,1) )
-plot(dvec, 1-colSums(pprob[ sG=="0",]), xlab="", ylim=c(0,1), las=1, type="n",pch=20, ylab="P(gene conv)")
+plot(dvec, 1-colSums(pprob[ st$Ghap=="0",]), xlab="", ylim=c(0,1), las=1, type="n",pch=20, ylab="P(gene conv)")
 abline(v=dvec, lty=1, col="grey90" )
-points(dvec, 1-colSums(pprob[ sG=="0",]), type="o",pch=20 )
+points(dvec, 1-colSums(pprob[ st$Ghap=="0",]), type="o",pch=20 )
 title(xlab="Position (bp)" )
 #######
 screen(1)

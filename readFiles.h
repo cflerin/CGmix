@@ -18,6 +18,7 @@ void readHapInfo(const string &fname, vector<vector<string> > &hapInfo );
 void print1Dvec(const vector<int>& vec);
 void print2Dvec(const vector<vector<int> >& vec);
 void print2DvecString(const vector<vector<string> >& vec);
+void print1DvecString(const vector<string>& vec);
 
 
 #endif

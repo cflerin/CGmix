@@ -39,6 +39,13 @@ for(int i=0; i < vec.size(); i++) {
    }
 }
 
+void print1DvecString(const vector<string>& vec) {
+    for (vector<string>::const_iterator iter = vec.begin();
+        iter != vec.end(); ++iter) {
+        cout << *iter << " ";
+    }
+}
+
 
 
 void readSites(const string &fname, vector<vector<int> > &sites ) {
