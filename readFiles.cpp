@@ -24,9 +24,9 @@ void print1Dvec(const vector<int>& vec) {
 }
 
 void print2Dvec(const vector<vector<int> >& vec) {
-for(int i=0; i < vec.size(); i++) {
-      for (int j=0; j < vec[i].size(); j++)
-        cout << vec[i][j] << " "; 
+for(int i=0; i < vec[0].size(); i++) {
+      for (int j=0; j < vec.size(); j++)
+        cout << vec[j][i] << " "; 
       cout << endl;
    }
 }
@@ -46,26 +46,43 @@ void print1DvecString(const vector<string>& vec) {
     }
 }
 
-
-
 void readSites(const string &fname, vector<vector<int> > &sites ) {
 	ifstream file ( fname.c_str() );
+    unsigned int cnt = 0;
 	if (file.is_open()) {
 		while (file.good()) {
-			vector<int> row;
 			string line;
 			getline(file, line);
             if( line == "" )
                 continue;
 			stringstream ss(line);
 			string field;
-			while (getline(ss, field, '\t')) {
-				stringstream fs(field);
-				int f = 0;
-				fs >> f;
-				row.push_back(f);
-			}
-			sites.push_back(row);
+            if( cnt == 0 ) { // read in first row:
+                vector<int> row;
+                while (getline(ss, field, '\t')) {
+                    stringstream fs(field);
+                    int f = 0;
+                    fs >> f;
+                    row.push_back(f);
+                }
+                // fill vector of vectors:
+                for(int j=0; j < row.size(); j++ ) {
+                    vector<int> tmp;
+                    tmp.push_back( row[j] );
+                    sites.push_back( tmp );
+
+                }
+            } else { // read the rest of the file:
+                int j = 0;
+                while (getline(ss, field, '\t')) {
+                    stringstream fs(field);
+                    int f = 0;
+                    fs >> f;
+                    sites[j].push_back(f);
+                    j++;
+                }
+            }
+            cnt++;
 		}
 		file.close();
 	} else

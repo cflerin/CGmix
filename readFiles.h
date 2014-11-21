@@ -12,6 +12,7 @@
 using namespace std;
 
 void readSites(const string &sitefname, vector<vector<int> > &sites );
+// void readSites(const string &fname, vector<int> &sites );
 void readLocs(const string &locfname, vector<int> &locs );
 void readHapInfo(const string &fname, vector<vector<string> > &hapInfo );
 

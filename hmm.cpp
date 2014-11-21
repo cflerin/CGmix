@@ -114,22 +114,24 @@ void forward(
     // cout << fwd.size() << " " << fwd[0].size() << endl;
     // starting prob: 
     double e;
+    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
+    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
     for(int i=0; i < st.states.size(); i++) {
-        if( sites[ st.Gindx[i] ][0] == obs[0] ) {
+        if( sites[0][ st.Gindx[i] ] == obs[0] ) {
             e = emit.match;
         } else {
             e = emit.mismatch;
         }
         if( st.Ghap[i] == "0" ) {
-            fwd[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) * e );
+            fwd[0][i] =  sprob_G0 + e;
         } else {
-            fwd[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) * e );
+            fwd[0][i] =  sprob_G1 + e;
         }
     }
     int d;
     double lsum, tmp, trX, trG;
     double negInf = - std::numeric_limits<double>::infinity();
-    for(int j=1; j < sites[0].size() ; j++ ) {
+    for(int j=1; j < sites.size() ; j++ ) {
         d = dvec[j] - dvec[j-1];
         for(int t=0; t < st.states.size(); t++) {
             lsum = negInf;
@@ -137,16 +139,16 @@ void forward(
                 getXtrans( t, f, d, st, p, trX);
                 // cout << "\t" <<trX << "\t" << trG << endl;
                 getGtrans( t, f, d, st, p, trG);
-                tmp = fwd[f][j-1] + log( trX * trG );
+                tmp = fwd[j-1][f] + log( trX * trG );
                 if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
             } // end 'from' loop
             // emission prob:
-            if( sites[ st.Gindx[t] ][j] == obs[j] ) {
+            if( sites[j][ st.Gindx[t] ] == obs[j] ) {
                 e = emit.match;
             } else {
                 e = emit.mismatch;
             }
-            fwd[t][j] = log( e ) + lsum;
+            fwd[j][t] = e + lsum;
             // cout << fwd[t][j] << "\t";
         } // end 'to' loop
         // cout << endl;

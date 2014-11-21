@@ -48,8 +48,8 @@ start <- Sys.time()
 sitefname <- "data/CEU-YRI_full.ldhat.sites"
 locfname <- "data/CEU-YRI_full.ldhat.locs"
 
-n1h <- 3 # 99
-n2h <- 3 # 107
+n1h <- 10 # 4 # 99
+n2h <- 10 # 4 # 107
 
 tmp <- scan( sitefname, what=character(), skip=1, quiet=TRUE)
 hapnames <- gsub("^>","",tmp[ seq(1,length(tmp),by=2) ])
@@ -59,7 +59,7 @@ names(hap)[1:(n1h*2)] <- paste("p1-",hapnames[1:(n1h*2)],sep="")
 names(hap)[(n1h*2+1):length(hap)] <- paste("p2-",hapnames[(n1h*2+1):length(hap)],sep="")
 
 # reduce the haplotype size:
-hsize <- 20 # 11200
+hsize <- 500 # 20 # 11200
 hap <- lapply(hap,function(x) x[1:hsize] )
 
 # cut down hap in size
@@ -235,9 +235,9 @@ ref <- do.call("rbind", c(refH1,refH2) )
 
 states <- st$states
 
-write.table( rbind(ref,obs), file="src/admixSampleData.sites", sep="\t", col.names=FALSE,row.names=FALSE)
-write.table( matrix(dvec,nrow=1), file="src/admixSampleData.locs", sep="\t", col.names=FALSE,row.names=FALSE)
-write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file="src/admixSampleData.hapnames", sep="\t", col.names=FALSE,row.names=FALSE,quote=FALSE)
+write.table( rbind(ref,obs), file=paste("src/admixSampleData_j",S,".sites",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
+write.table( matrix(dvec,nrow=1), file=paste("src/admixSampleData_j",S,".locs",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
+write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file=paste("src/admixSampleData_j",S,".hapnames",sep=""), sep="\t", col.names=FALSE,row.names=FALSE,quote=FALSE)
 ##############################
 # how to determine which haplotype to use for the emissions match/mismatch?
 # either use Xstate or G state? or
