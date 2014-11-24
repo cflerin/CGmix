@@ -48,8 +48,8 @@ start <- Sys.time()
 sitefname <- "data/CEU-YRI_full.ldhat.sites"
 locfname <- "data/CEU-YRI_full.ldhat.locs"
 
-n1h <- 3 # 99
-n2h <- 3 # 107
+n1h <- 20 # 99
+n2h <- 20 # 107
 
 tmp <- scan( sitefname, what=character(), skip=1, quiet=TRUE)
 hapnames <- gsub("^>","",tmp[ seq(1,length(tmp),by=2) ])
@@ -59,7 +59,7 @@ names(hap)[1:(n1h*2)] <- paste("p1-",hapnames[1:(n1h*2)],sep="")
 names(hap)[(n1h*2+1):length(hap)] <- paste("p2-",hapnames[(n1h*2+1):length(hap)],sep="")
 
 # reduce the haplotype size:
-hsize <- 500 # 20 # 11200
+hsize <- 1000 # 20 # 11200
 hap <- lapply(hap,function(x) x[1:hsize] )
 
 # cut down hap in size
@@ -82,10 +82,11 @@ sampHap <- list()
 S <- length(hap[[1]])
 nbreaks <- 4
 #bp <- sort(sample(S-2,nbreaks)) +1
-bp <- c(4,7,12) 
+#bp <- c(4,7,12) 
+bp <- c(69,117,193,947)
 
-refH1mix <- 5 # sample(1:length(refH1),1)
-refH2mix <- 5 # sample(1:length(refH2),1)
+refH1mix <- 11 #5 # sample(1:length(refH1),1)
+refH2mix <- 38 #5 # sample(1:length(refH2),1)
 
 m <- cbind(
     refH1[[refH1mix]] ,
@@ -235,9 +236,9 @@ ref <- do.call("rbind", c(refH1,refH2) )
 
 states <- st$states
 
-# write.table( rbind(ref,obs), file=paste("src/admixSampleData_j",S,".sites",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
-# write.table( matrix(dvec,nrow=1), file=paste("src/admixSampleData_j",S,".locs",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
-# write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file=paste("src/admixSampleData_j",S,".hapnames",sep=""), sep="\t", col.names=FALSE,row.names=FALSE,quote=FALSE)
+write.table( rbind(ref,obs), file=paste("src/admixSampleData_j",S,".sites",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
+write.table( matrix(dvec,nrow=1), file=paste("src/admixSampleData_j",S,".locs",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
+write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file=paste("src/admixSampleData_j",S,".hapnames",sep=""), sep="\t", col.names=FALSE,row.names=FALSE,quote=FALSE)
 ##############################
 # how to determine which haplotype to use for the emissions match/mismatch?
 # either use Xstate or G state? or

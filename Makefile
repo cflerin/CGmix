@@ -1,8 +1,8 @@
 CPP = g++
 EXECUTABLE = CGmix
 
-CFLAGS = -Wall -g # -O2 -m64 
-CPPFLAGS = -O2 -D_FILE_OFFSET_BITS=64 
+CFLAGS = -Wall -O3 -m64 
+CPPFLAGS = -O3 -D_FILE_OFFSET_BITS=64 
 LIB = -lz 
 
 OBJS = CGmix.o readFiles.o hmm.o
