@@ -43,6 +43,14 @@ void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st 
 void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX );
 void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG );
 
+void getsprob( 
+        const vector<int>& sites0, 
+        const struct parameters& p, 
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const vector<int>& obs,
+        vector<double>& sprob );
+
 void forward( 
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
@@ -50,6 +58,7 @@ void forward(
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
+        const vector<double>& sprob,
         vector<vector<double> >& fwd );
 
 void backward(
@@ -77,6 +86,7 @@ void viterbi(
 		const class hmmStates& st,
 		const vector<int>& obs,
         const vector<vector<double> >& pprob,
+        const vector<double>& sprob,
 		vector<vector<double> >& vit,
 		vector<string>& vpath,
 		vector<double>& vprob );

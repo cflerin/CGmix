@@ -48,8 +48,8 @@ start <- Sys.time()
 sitefname <- "data/CEU-YRI_full.ldhat.sites"
 locfname <- "data/CEU-YRI_full.ldhat.locs"
 
-n1h <- 10 # 4 # 99
-n2h <- 10 # 4 # 107
+n1h <- 3 # 99
+n2h <- 3 # 107
 
 tmp <- scan( sitefname, what=character(), skip=1, quiet=TRUE)
 hapnames <- gsub("^>","",tmp[ seq(1,length(tmp),by=2) ])
@@ -235,9 +235,9 @@ ref <- do.call("rbind", c(refH1,refH2) )
 
 states <- st$states
 
-write.table( rbind(ref,obs), file=paste("src/admixSampleData_j",S,".sites",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
-write.table( matrix(dvec,nrow=1), file=paste("src/admixSampleData_j",S,".locs",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
-write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file=paste("src/admixSampleData_j",S,".hapnames",sep=""), sep="\t", col.names=FALSE,row.names=FALSE,quote=FALSE)
+# write.table( rbind(ref,obs), file=paste("src/admixSampleData_j",S,".sites",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
+# write.table( matrix(dvec,nrow=1), file=paste("src/admixSampleData_j",S,".locs",sep=""), sep="\t", col.names=FALSE,row.names=FALSE)
+# write.table( cbind( c(rownames(ref),"obs"), c(sXp,"p3") ), file=paste("src/admixSampleData_j",S,".hapnames",sep=""), sep="\t", col.names=FALSE,row.names=FALSE,quote=FALSE)
 ##############################
 # how to determine which haplotype to use for the emissions match/mismatch?
 # either use Xstate or G state? or
@@ -379,7 +379,9 @@ for(j in 2:S) {
 } # end site loop
 # termination:
 vpath <- rep(NA,length(obs))
+vprob <- rep(NA,length(obs))
 vpath[S] <- states[ which.max( vit[,length(obs)] ) ]
+vprob[S] <- pprob[ which.max( vit[,length(obs)] ) , S ]
 # traceback:
 for(j in (S-1):1 ) {
     # find previous max state:
@@ -396,6 +398,7 @@ for(j in (S-1):1 ) {
         tmp[f] <- vit[f,j] + log( trX * trG )
     } # end from loop
     vpath[j] <- states[ which.max(tmp) ]
+    vprob[j] <- pprob[ which.max(tmp), j ]
     #vpath[j] <- states[ which.max( vit[states,j] + log(transL[[j]][states,vpath[j+1]]) ) ]
 }
 cat("done in ",format(Sys.time()-start1),"\n")

@@ -103,6 +103,30 @@ void getGtrans(const int& to, const int& from, const int& d, const class hmmStat
     if( st.Ghap[from] != "0" & st.Ghap[to] != "0" & st.Ghap[from] != st.Ghap[to] ) trG = a5;
 }
 
+void getsprob( 
+        const vector<int>& sites0, 
+        const struct parameters& p, 
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const vector<int>& obs,
+        vector<double>& sprob ) {
+    double e;
+    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
+    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
+    for(int i=0; i < st.states.size(); i++) {
+        if( sites0[ st.Gindx[i] ] == obs[0] ) {
+            e = emit.match;
+        } else {
+            e = emit.mismatch;
+        }
+        if( st.Ghap[i] == "0" ) {
+            sprob[i] =  sprob_G0 + e;
+        } else {
+            sprob[i] =  sprob_G1 + e;
+        }
+    }
+}
+
 void forward( 
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
@@ -110,26 +134,13 @@ void forward(
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
+        const vector<double>& sprob,
         vector<vector<double> >& fwd ) {
     // cout << fwd.size() << " " << fwd[0].size() << endl;
     // starting prob: 
-    double e;
-    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
-    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
-    for(int i=0; i < st.states.size(); i++) {
-        if( sites[0][ st.Gindx[i] ] == obs[0] ) {
-            e = emit.match;
-        } else {
-            e = emit.mismatch;
-        }
-        if( st.Ghap[i] == "0" ) {
-            fwd[0][i] =  sprob_G0 + e;
-        } else {
-            fwd[0][i] =  sprob_G1 + e;
-        }
-    }
+    fwd[0] = sprob;
     int d;
-    double lsum, tmp, trX, trG;
+    double lsum, tmp, trX, trG, e;
     double negInf = - std::numeric_limits<double>::infinity();
     for(int j=1; j < sites.size() ; j++ ) {
         d = dvec[j] - dvec[j-1];
@@ -163,14 +174,14 @@ void backward(
 		const class hmmStates& st,
 		const vector<int>& obs,
 		vector<vector<double> >& bwd ) {
-	// starting prob:
-	for(int i=0; i < st.states.size(); i++) {
-		bwd[i][ bwd[i].size()-1 ] = 0.0;
-	}
+	// // starting prob:
+	// for(int i=0; i < st.states.size(); i++) {
+	// 	bwd[i][ bwd[i].size()-1 ] = 0.0;
+	// }
 	double e, lsum, tmp, trX, trG;
 	double negInf = - std::numeric_limits<double>::infinity();
 	int d;
-	for(int j = sites[0].size()-2; j >= 0 ; j-- ) {
+	for(int j = sites.size()-2; j >= 0 ; j-- ) {
 		d = dvec[j+1] - dvec[j];
 		for(int f=0; f < st.states.size(); f++ ) {
 			lsum = negInf;
@@ -178,24 +189,23 @@ void backward(
 				getXtrans( t, f, d, st, p, trX);
 				getGtrans( t, f, d, st, p, trG);
 				// emission prob:
-				if( sites[ st.Gindx[t] ][j+1] == obs[j+1] ) {
+				if( sites[j+1][ st.Gindx[t] ] == obs[j+1] ) {
 					e = emit.match;
 				} else {
 					e = emit.mismatch;
 				}
-				tmp = bwd[t][j+1] + log( trX * trG * e );
+				tmp = bwd[j+1][t] + log( trX * trG ) + e ;
 				if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
 			} // t loop
-			bwd[f][j] = lsum;
+			bwd[j][f] = lsum;
 		} // f loop
 	} // j loop
 }
 
-
 void printMat( const vector<vector<double> >& mat ) {
-    for(int i=0; i < mat.size(); i++ ) {
-        for(int j=0; j < mat[0].size(); j++ ) {
-            cout << setprecision(15) << mat[i][j] << " ";
+    for(int i=0; i < mat[0].size(); i++ ) {
+        for(int j=0; j < mat.size(); j++ ) {
+            cout << setprecision(15) << mat[j][i] << " ";
         }
         cout << endl;
     }
@@ -218,48 +228,42 @@ void postDecode(
 		const vector<vector<double> >& bwd,
 		vector<vector<double> >& pprob
 		) {
-	vector<double> sprob;
-	for(int i=0; i < fwd.size(); i++) {
-		sprob.push_back( fwd[i][ fwd[i].size()-1 ] );
-		//cout << fwd[i][ fwd[i].size()-1 ] << " " << endl;
-	}
 	double Pxa, tmp;
-	logSumExp( sprob, Pxa );
+	logSumExp( fwd[ fwd.size()-1 ], Pxa );
 	cout << "Pxa= " << Pxa << endl;
     double negInf = - std::numeric_limits<double>::infinity();
 	// backward:
 	double Pxb = bwd[0][0] + fwd[0][0];
-	for(int i=1; i < fwd.size(); i++ ) {
-		tmp = bwd[i][0] + fwd[i][0];
-		// Pxb += bwd[0][0] + fwd[0][ fwd[0].size()-1 ];
+	for(int i=1; i < fwd[0].size(); i++ ) {
+		tmp = bwd[0][i] + fwd[0][i];
 		if( tmp > negInf ) 
             Pxb = tmp + log( 1 + exp( Pxb - tmp ) );
 	}
 	cout << "Pxb= " << Pxb << endl;
     // decoding:
-    for(int j=0; j < fwd[0].size(); j++ ) {
-        for(int i=0; i < fwd.size(); i++ ) {
-            pprob[i][j] = fwd[i][j] + bwd[i][j] - Pxa;
+    for(int j=0; j < fwd.size(); j++ ) {
+        for(int i=0; i < fwd[0].size(); i++ ) {
+            pprob[j][i] = fwd[j][i] + bwd[j][i] - Pxa;
         }
     }
     // normalize:
     double cmax, csum;
-    for(int j=0; j < fwd[0].size(); j++ ) {
+    for(int j=0; j < fwd.size(); j++ ) {
         cmax = negInf;
         // determine max value:
-        for(int i=0; i < fwd.size(); i++ ) {
-            if( pprob[i][j] > cmax ) 
-                cmax = pprob[i][j];
+        for(int i=0; i < fwd[0].size(); i++ ) {
+            if( pprob[j][i] > cmax ) 
+                cmax = pprob[j][i];
         }
         // subtract max and determine sum:
         csum = 0.0;
-        for(int i=0; i < fwd.size(); i++ ) {
-            pprob[i][j] = pprob[i][j] - cmax;
-            csum += exp( pprob[i][j] );
+        for(int i=0; i < fwd[0].size(); i++ ) {
+            pprob[j][i] = pprob[j][i] - cmax;
+            csum += exp( pprob[j][i] );
         }
         // divide by sum:
-        for(int i=0; i < fwd.size(); i++ ) {
-            pprob[i][j] = exp( pprob[i][j] ) / csum;
+        for(int i=0; i < fwd[0].size(); i++ ) {
+            pprob[j][i] = exp( pprob[j][i] ) / csum;
         }
     }
 }
@@ -272,47 +276,34 @@ void viterbi(
 		const class hmmStates& st,
 		const vector<int>& obs,
         const vector<vector<double> >& pprob,
+        const vector<double>& sprob,
 		vector<vector<double> >& vit,
 		vector<string>& vpath,
 		vector<double>& vprob ) {
     // starting prob, same as fwd:
-    double e;
-    for(int i=0; i < st.states.size(); i++) {
-        if( sites[ st.Gindx[i] ][0] == obs[0] ) {
-            e = emit.match;
-        } else {
-            e = emit.mismatch;
-        }
-        // cout << st.Ghap[i] << endl;
-        if( st.Ghap[i] == "0" ) {
-            vit[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) * e );
-        } else {
-            vit[i][0] = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) * e );
-        }
-    }
+    vit[0] = sprob;
     // recursion:
     int d;
-    double trX, trG, vmax, tmp;
+    double trX, trG, vmax, tmp, e;
     double negInf = - std::numeric_limits<double>::infinity();
-    // vector<double> tmp( sites.size()-1 );
-    for(int j=1; j < sites[0].size() ; j++ ) {
+    for(int j=1; j < sites.size() ; j++ ) {
     	d = dvec[j] - dvec[j-1];
     	for(int t=0; t < st.states.size(); t++ ) {
     	    vmax = negInf;
     	    for(int f=0; f < st.states.size(); f++ ) {
     	    	getXtrans( t, f, d, st, p, trX);
     	    	getGtrans( t, f, d, st, p, trG);
-                tmp = vit[f][j-1] + log( trX * trG );
+                tmp = vit[j-1][f] + log( trX * trG );
                 if( tmp > vmax )
                     vmax = tmp;
     	    } // end from loop
     	    // emission prob:
-    	    if( sites[ st.Gindx[t] ][j] == obs[j] ) {
+    	    if( sites[j][ st.Gindx[t] ] == obs[j] ) {
     	    	e = emit.match;
     	    } else {
     	    	e = emit.mismatch;
     	    }
-    	    vit[t][j] = log( e ) + vmax;
+    	    vit[j][t] = e + vmax;
     	} // end to loop
     } // end j loop
     // termination:
@@ -320,10 +311,10 @@ void viterbi(
     // find last max state:
     vmax = negInf;
     maxix = -1;
-    int j = sites[0].size()-1;
-    for(int i=0; i < vit.size(); i++ ) {
-        if( vit[i][j] > vmax ) {
-            vmax = vit[i][j];
+    int j = sites.size()-1;
+    for(int i=0; i < vit[0].size(); i++ ) {
+        if( vit[j][i] > vmax ) {
+            vmax = vit[j][i];
             maxix = i;
         }
     } 
@@ -332,14 +323,14 @@ void viterbi(
     // cout << vpath[j] << " " << vmax << " " << maxix << endl;
     // traceback:
     int t;
-    for(int j = sites[0].size()-2; j >= 0 ; j-- ) {
+    for(int j = sites.size()-2; j >= 0 ; j-- ) {
         // find previous max state:
         t = maxix;
         vmax = negInf;
         for(int f=0; f < st.states.size(); f++) {
             getXtrans( t, f, d, st, p, trX);
             getGtrans( t, f, d, st, p, trG);
-            tmp = vit[f][j] + log( trX * trG );
+            tmp = vit[j][f] + log( trX * trG );
             if( tmp > vmax ) {
                 vmax = tmp;
                 maxix = f;
