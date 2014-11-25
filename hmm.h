@@ -37,6 +37,15 @@ class hmmStates
         vector<string> Xpop, Xhap, Gpop, Ghap, states;
         vector<int> Xindx, Gindx;
 };
+class trBin 
+{
+    public:
+        trBin(){};
+        ~trBin(){};
+        vector<int> Xswitch, Pswitch;
+        vector<string> toPop;
+        vector<double> tr;
+};
 
 void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st );
 
@@ -50,6 +59,9 @@ void getsprob(
         const class hmmStates& st,
         const vector<int>& obs,
         vector<double>& sprob );
+
+int lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trXbin, double& trX );
+int lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin, double& trG );
 
 void forward( 
         const vector<vector<int> >& sites,
