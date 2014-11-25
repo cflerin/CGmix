@@ -11,10 +11,20 @@
 
 using namespace std;
 
+class hapDef 
+{
+    public:
+        hapDef(){};
+        ~hapDef(){};
+        vector<string> hapName, hapPop;
+        vector<int> hN, hP;
+};
+
 void readSites(const string &sitefname, vector<vector<int> > &sites );
 // void readSites(const string &fname, vector<int> &sites );
 void readLocs(const string &locfname, vector<int> &locs );
 void readHapInfo(const string &fname, vector<vector<string> > &hapInfo );
+// void readHapInfo(const string &fname, class hapDef &hapInfo );
 
 void print1Dvec(const vector<int>& vec);
 void print2Dvec(const vector<vector<int> >& vec);

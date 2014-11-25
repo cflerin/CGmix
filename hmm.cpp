@@ -9,27 +9,28 @@
 
 using namespace std;
 
-void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st ) {
-    int nrow = hapInfo.size() - 1 ;
+// void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st ) {
+void generateStates(const class hapDef& hapInfo, class hmmStates& st ) {
+    int nrow = hapInfo.hN.size() - 1 ;
     // G null states:
     for (int j=0; j < nrow; j++) { 
         // cout << hapInfo[j][0] << "\t" << hapInfo[j][1] << "\t" << "0" << "\t" << "0" << "\t" << endl;
-        st.Xhap.push_back( hapInfo[j][0] );
-        st.Xpop.push_back( hapInfo[j][1] );
+        st.Xhap.push_back( hapInfo.hN[j] );
+        st.Xpop.push_back( hapInfo.hP[j] );
         st.Xindx.push_back( j ); // check if this is right
-        st.Ghap.push_back( "0" );
-        st.Gpop.push_back( "0" );
+        st.Ghap.push_back( 0 );
+        st.Gpop.push_back( 0 );
         st.Gindx.push_back( j ); // check if this is right
     }
     // All combinations of X and G:
     for(int i=0; i < nrow; i++) {
         for (int j=0; j < nrow; j++) {
             // cout << hapInfo[j][0] << "\t" << hapInfo[j][1] << "\t" << hapInfo[i][0] << "\t" << hapInfo[i][1] << "\t" << endl;
-            st.Xhap.push_back( hapInfo[j][0] );
-            st.Xpop.push_back( hapInfo[j][1] );
+            st.Xhap.push_back( hapInfo.hN[j] );
+            st.Xpop.push_back( hapInfo.hP[j] );
             st.Xindx.push_back( j );
-            st.Ghap.push_back( hapInfo[i][0] );
-            st.Gpop.push_back( hapInfo[i][1] );
+            st.Ghap.push_back( hapInfo.hN[i] );
+            st.Gpop.push_back( hapInfo.hP[i] );
             st.Gindx.push_back( i );
         }
     }
@@ -37,7 +38,8 @@ void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st 
     nrow = st.Xhap.size();
     for(int i=0; i < nrow; i++) {
         string tmp;
-        tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
+        tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]) + "-" + std::to_string(st.Gpop[i]) + "-" + std::to_string(st.Ghap[i]);
+        //tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
         st.states.push_back( tmp );
         // cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
         //      st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
@@ -47,11 +49,11 @@ void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st 
 void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX ) {
     double u;
     int nm;
-    if( st.Xpop[to] == "p1" ) {
+    if( st.Xpop[to] == 1 ) {
         u = p.u1;
         nm = p.n1;
     }
-    if( st.Xpop[to] == "p2" ) {
+    if( st.Xpop[to] == 2 ) {
         u = 1.0 - p.u1;
         nm = p.n2;
     }
@@ -73,16 +75,17 @@ void getXtrans(const int& to, const int& from, const int& d, const class hmmStat
                   ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
         }
     }
+    trX = log(trX);
 }
 
 void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG ) {
     double u, a1, a2, a3, a4, a5;
     int nm;
-    if( st.Gpop[to] == "p1" ) {
+    if( st.Gpop[to] == 1 ) {
         u = p.u1;
         nm = p.n1;
     }
-    if( st.Gpop[to] == "p2" ) {
+    if( st.Gpop[to] == 2 ) {
         u = 1.0 - p.u1;
         nm = p.n2;
     }
@@ -97,10 +100,11 @@ void getGtrans(const int& to, const int& from, const int& d, const class hmmStat
     // 4: Pr(G[j+1]=g | G[j] = g):
     a4 = exp( -p.lam * d ) + a5 ;
     if( st.Ghap[from] == st.Ghap[to] )              trG = a4; // erroneously includes 0 -> 0; overwritten on next line
-    if( ( st.Ghap[from] == "0" ) & ( st.Ghap[to] == "0" ) ) trG = a1;
-    if( st.Ghap[from] == "0" & st.Ghap[to] != "0" ) trG = a2;
-    if( st.Ghap[from] != "0" & st.Ghap[to] == "0" ) trG = a3;
-    if( st.Ghap[from] != "0" & st.Ghap[to] != "0" & st.Ghap[from] != st.Ghap[to] ) trG = a5;
+    if( ( st.Ghap[from] == 0 ) & ( st.Ghap[to] == 0 ) ) trG = a1;
+    if( st.Ghap[from] == 0 & st.Ghap[to] != 0 ) trG = a2;
+    if( st.Ghap[from] != 0 & st.Ghap[to] == 0 ) trG = a3;
+    if( st.Ghap[from] != 0 & st.Ghap[to] != 0 & st.Ghap[from] != st.Ghap[to] ) trG = a5;
+    trG = log(trG);
 }
 
 void getsprob( 
@@ -119,7 +123,7 @@ void getsprob(
         } else {
             e = emit.mismatch;
         }
-        if( st.Ghap[i] == "0" ) {
+        if( st.Ghap[i] == 0 ) {
             sprob[i] =  sprob_G0 + e;
         } else {
             sprob[i] =  sprob_G1 + e;
@@ -142,22 +146,21 @@ int lookupXtrans(const int& to, const int& from, const int& d, const class hmmSt
             Pswitch = 0;
         }
     }
-    cout << "Xsw " << Xswitch << " Psw " << Pswitch << " toPop " << st.Xpop[to] << " ";
-    // start:
-    if( trXbin.tr.size() == 0 ) {
+    // cout << "Xsw " << Xswitch << " Psw " << Pswitch << " toPop " << st.Xpop[to] << " ";
+    if( trXbin.tr.size() == 0 ) { // start:
         getXtrans( to, from, d, st, p, trX);
         trXbin.tr.push_back( trX );
         trXbin.Xswitch.push_back( Xswitch );
         trXbin.Pswitch.push_back( Pswitch );
         trXbin.toPop.push_back( st.Xpop[to] );
-        cout << endl << "started trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
+        // cout << endl << "started trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
         return(0);
     }
     // search for existing transition within trBin:
     for(int i=0; i < trXbin.tr.size(); i++ ) {
         if( ( trXbin.Xswitch[i] == Xswitch ) & ( trXbin.Pswitch[i] == Pswitch ) & ( trXbin.toPop[i] == st.Xpop[to] ) ) {
             trX = trXbin.tr[i];
-            cout << "reused trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
+            // cout << "reused trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
             return(1);
         }
     }
@@ -167,7 +170,44 @@ int lookupXtrans(const int& to, const int& from, const int& d, const class hmmSt
     trXbin.Xswitch.push_back( Xswitch );
     trXbin.Pswitch.push_back( Pswitch );
     trXbin.toPop.push_back( st.Xpop[to] );
-    cout << "added trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
+    // cout << "added trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
+    return(2);
+}
+
+int lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin, double& trG ) {
+    int type;
+    if( st.Ghap[from] == st.Ghap[to] )
+        type = 4;
+    if( ( st.Ghap[from] == st.Ghap[to] ) & ( st.Ghap[from] == 0 ) )
+        type = 1; // overwrites above
+    if( ( st.Ghap[from] == 0 ) & ( st.Ghap[to] == 0 ) )
+        type = 2;
+    if( ( st.Ghap[from] != 0 ) & ( st.Ghap[to] == 0 ) )
+        type = 3;
+    if( ( st.Ghap[from] != 0 ) & ( st.Ghap[to] != 0 ) & ( st.Ghap[from] != st.Ghap[to] ) )
+        type = 5;
+    if( trGbin.tr.size() == 0 ) { // start:
+        getGtrans( to, from, d, st, p, trG);
+        trGbin.tr.push_back( trG );
+        trGbin.type.push_back( type );
+        trGbin.toPop.push_back( st.Gpop[to] );
+        cout << endl << "started trG = " <<  trG << " size=" << trGbin.tr.size() << endl;
+        return(0);
+    }
+    // search for existing transition within trBin:
+    for(int i=0; i < trGbin.tr.size(); i++ ) {
+        if( ( trGbin.type[i] == type ) & ( trGbin.toPop[i] == st.Gpop[to] ) ) {
+            trG = trGbin.tr[i];
+            cout << "reused trG = " <<  trG << " size=" << trGbin.tr.size() << endl;
+            return(1);
+        }
+    }
+    // generate new transition if not found above:
+    getGtrans( to, from, d, st, p, trG);
+    trGbin.tr.push_back( trG );
+    trGbin.type.push_back( type );
+    trGbin.toPop.push_back( st.Gpop[to] );
+    cout << "added trG = " <<  trG << " size=" << trGbin.tr.size() << endl;
     return(2);
 }
 
@@ -186,21 +226,23 @@ void forward(
     int d;
     double lsum, tmp, trX, trG, e;
     double negInf = - std::numeric_limits<double>::infinity();
-    // for(int j=1; j < sites.size() ; j++ ) {
-    for(int j=1; j < 2 ; j++ ) {
+    for(int j=1; j < sites.size() ; j++ ) {
         d = dvec[j] - dvec[j-1];
-        class trBin trXbin;
-        cout << trXbin.tr.size() << endl;
+        class trBin trXbin, trGbin;
+        // cout << trXbin.tr.size() << endl;
+        double test;
         for(int t=0; t < st.states.size(); t++) {
-        //for(int t=0; t < 1; t++) {
             lsum = negInf;
             for(int f=0; f < st.states.size(); f++) {
                 cout << "from: " << st.states[f] << " to: " << st.states[t] << "\t";
                 lookupXtrans( t, f, d, st, p, trXbin, trX );
                 // getXtrans( t, f, d, st, p, trX);
                 // cout << "\t" <<trX << "\t" << trG << endl;
-                getGtrans( t, f, d, st, p, trG);
-                tmp = fwd[j-1][f] + log( trX * trG );
+                lookupGtrans( t, f, d, st, p, trGbin, trG );
+                // cout << "lookup trG= " << trG << "\t";
+                // getGtrans( t, f, d, st, p, trG);
+                // cout << "calc trG= " << trG << "\t";
+                tmp = fwd[j-1][f] + trX + trG;
                 if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
             } // end 'from' loop
             // emission prob:
@@ -212,12 +254,15 @@ void forward(
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
-        cout << trXbin.tr.size() << endl;
+        // cout << trXbin.tr.size() << endl;
         trXbin.Xswitch.clear();
         trXbin.Pswitch.clear();
         trXbin.tr.clear();
         trXbin.toPop.clear();
-        cout << trXbin.tr.size() << endl;
+        trGbin.tr.clear();
+        trGbin.type.clear();
+        trGbin.toPop.clear();
+        // cout << trXbin.tr.size() << endl;
     } // end j site loop
 }
 
@@ -285,7 +330,7 @@ void postDecode(
 		) {
 	double Pxa, tmp;
 	logSumExp( fwd[ fwd.size()-1 ], Pxa );
-	// cout << "Pxa= " << Pxa << endl;
+	cout << "Pxa= " << Pxa << endl;
     double negInf = - std::numeric_limits<double>::infinity();
 	// backward:
 	double Pxb = bwd[0][0] + fwd[0][0];
@@ -294,7 +339,7 @@ void postDecode(
 		if( tmp > negInf ) 
             Pxb = tmp + log( 1 + exp( Pxb - tmp ) );
 	}
-	// cout << "Pxb= " << Pxb << endl;
+	cout << "Pxb= " << Pxb << endl;
     // decoding:
     for(int j=0; j < fwd.size(); j++ ) {
         for(int i=0; i < fwd[0].size(); i++ ) {

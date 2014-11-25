@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip> // setprecision
 #include <cmath>   // log
+#include <algorithm>
 
 #include "readFiles.h"
 #include "hmm.h"
@@ -21,7 +22,6 @@ int main(int argc, char *argv[]) {
     cout << argv[0] << " " << argv[1] << " " << argv[2] << " " << argv[3] << endl;
     // read in data:
     vector<vector<int> > sites;
-    // readSites( "admixSampleData.sites", sites );
     readSites( argv[1], sites );
     cout << "Read " << sites[0].size() << " haplotypes with " << sites.size() << " sites" << endl;
     // print2Dvec( sites );
@@ -32,12 +32,22 @@ int main(int argc, char *argv[]) {
     cout << "Read " << locs.size() << " physical positions" << endl;
     // print1Dvec( locs ); cout << endl;
 
-    vector<vector<string> > hapInfo;
-    // readHapInfo( "admixSampleData.hapnames", hapInfo );
-    readHapInfo( argv[3], hapInfo );
-    cout << "Read " << hapInfo.size() << " haplotype definitions" << endl;
-    // print2DvecString( hapInfo );
-
+    vector<vector<string> > tmp;
+    class hapDef hapInfo;
+    readHapInfo( argv[3], tmp );
+    for(int i=0; i < tmp.size(); i++ ) {
+        hapInfo.hapName.push_back( tmp[i][0] );
+        hapInfo.hapPop.push_back( tmp[i][1] );
+        hapInfo.hN.push_back(i+1);
+        if( tmp[i][1] == "p1" )
+            hapInfo.hP.push_back(1);
+        if( tmp[i][1] == "p2" )
+            hapInfo.hP.push_back(2);
+        if( tmp[i][1] == "p3" )
+            hapInfo.hP.push_back(3);
+        // cout << hapInfo.hapName[i] << " " << hapInfo.hapPop[i] << " " << hapInfo.hN[i] << " " << hapInfo.hP[i] << endl;
+    }
+    cout << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
     hmmStates st;
     generateStates( hapInfo, st );
     cout << "Generated " << st.states.size() << " states" << endl;
@@ -46,10 +56,10 @@ int main(int argc, char *argv[]) {
     parameters param;
     param.n1 = 0;
     param.n2 = 0;
-    for(int i=0; i < hapInfo.size(); i++ ) {
-        if( hapInfo[i][1] == "p1" )
+    for(int i=0; i < hapInfo.hapPop.size(); i++ ) {
+        if( hapInfo.hapPop[i] == "p1" )
             param.n1 += 1;
-        if( hapInfo[i][1] == "p2" )
+        if( hapInfo.hapPop[i] == "p2" )
             param.n2 += 1;
     }
     // cout << "n1= " << param.n1 << " | n2= " << param.n2 << endl;
@@ -76,23 +86,22 @@ int main(int argc, char *argv[]) {
     emit.match = log( emit.match );
     emit.mismatch = log( emit.mismatch );
 
-    cout << "Starting obs..." << endl;
     vector<int> obs( param.S, 0 );
-    for(int i=0; i < hapInfo.size(); i++) {
-        if( hapInfo[i][0] == "obs" ) {
+    for(int i=0; i < hapInfo.hN.size(); i++) {
+        if( hapInfo.hapName[i] == "obs" ) {
             for(int j=0; j < sites.size(); j++) {
                 obs[j] = sites[j][i];
             }
         }
     }
+
     cout << "Starting forward algorithm...";
     vector<double> sprob( st.states.size(), 0 );
     getsprob( sites[0], param, emit, st, obs, sprob );
-
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, locs, param, emit, st, obs, sprob, fwd );
     cout << "finished" << endl;
-    // printMat( fwd );
+    printMat( fwd );
 
     cout << "Starting backward algorithm...";
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
@@ -121,7 +130,7 @@ int main(int argc, char *argv[]) {
     for(int j=0; j < pprob.size(); j++ ) {
         csum =0.0;
         for(int i=0; i < st.states.size(); i++ ) {
-            if( st.Ghap[i] == "0" ) 
+            if( st.Ghap[i] == 0 ) 
                 continue;
             csum += pprob[j][i];
         }
@@ -129,8 +138,8 @@ int main(int argc, char *argv[]) {
         // cout << j << "\t" << 1-gcprob[j] << " " << endl;
         cout << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << vprob[j] << "\t" << 1-gcprob[j] << endl;
     }
-
-
+/*
+*/
 }
 
 

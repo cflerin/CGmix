@@ -14,6 +14,10 @@
 #include <iomanip>
 #include <cmath>
 #include <limits>
+#include <string>
+// #include <sstream>
+
+#include "readFiles.h"
 
 using namespace std;
 
@@ -34,20 +38,20 @@ class hmmStates
     public:
         hmmStates(){};
         ~hmmStates(){};
-        vector<string> Xpop, Xhap, Gpop, Ghap, states;
-        vector<int> Xindx, Gindx;
+        vector<string> states;
+        vector<int> Xpop, Xhap, Gpop, Ghap, Xindx, Gindx;
 };
 class trBin 
 {
     public:
         trBin(){};
         ~trBin(){};
-        vector<int> Xswitch, Pswitch;
-        vector<string> toPop;
+        vector<int> Xswitch, Pswitch, toPop, type;
         vector<double> tr;
 };
 
-void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st );
+// void generateStates(const vector<vector<string> >& hapInfo, class hmmStates& st );
+void generateStates(const class hapDef& hapInfo, class hmmStates& st );
 
 void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX );
 void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG );

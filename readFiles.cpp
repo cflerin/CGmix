@@ -47,16 +47,16 @@ void print1DvecString(const vector<string>& vec) {
 }
 
 void readSites(const string &fname, vector<vector<int> > &sites ) {
-	ifstream file ( fname.c_str() );
+    ifstream file ( fname.c_str() );
     unsigned int cnt = 0;
-	if (file.is_open()) {
-		while (file.good()) {
-			string line;
-			getline(file, line);
+    if (file.is_open()) {
+        while (file.good()) {
+            string line;
+            getline(file, line);
             if( line == "" )
                 continue;
-			stringstream ss(line);
-			string field;
+            stringstream ss(line);
+            string field;
             if( cnt == 0 ) { // read in first row:
                 vector<int> row;
                 while (getline(ss, field, '\t')) {
@@ -83,56 +83,56 @@ void readSites(const string &fname, vector<vector<int> > &sites ) {
                 }
             }
             cnt++;
-		}
-		file.close();
-	} else
-		cout << "Failed to open sites file: " << fname << endl;
+        }
+        file.close();
+    } else
+        cout << "Failed to open sites file: " << fname << endl;
 }
 
 void readHapInfo(const string &fname, vector<vector<string> > &hapInfo ) {
-	ifstream file ( fname.c_str() );
-	if (file.is_open()) {
-		while (file.good()) {
-			vector<string> row;
-			string line;
-			getline(file, line);
+    ifstream file ( fname.c_str() );
+    if (file.is_open()) {
+        while (file.good()) {
+            vector<string> row;
+            string line;
+            getline(file, line);
             if( line == "" )
                 continue;
-			stringstream ss(line);
-			string field;
-			while (getline(ss, field, '\t')) {
-				stringstream fs(field);
-				string f = "";
-				fs >> f;
-				row.push_back(f);
-			}
-			hapInfo.push_back(row);
-		}
-		file.close();
-	} else
-		cout << "Failed to open haplotype info file: " << fname << endl;
+            stringstream ss(line);
+            string field;
+            while( getline(ss, field, '\t')) {
+                stringstream fs(field);
+                string f = "";
+                fs >> f;
+                row.push_back(f);
+            }
+            hapInfo.push_back(row);
+        }
+        file.close();
+    } else
+        cout << "Failed to open haplotype info file: " << fname << endl;
 }
 
 void readLocs(const string &fname, vector<int> &locs ) {
-	ifstream file ( fname.c_str() );
-	if (file.is_open()) {
-		while (file.good()) {
-			string line;
-			getline(file, line);
+    ifstream file ( fname.c_str() );
+    if (file.is_open()) {
+        while (file.good()) {
+            string line;
+            getline(file, line);
             if( line == "" )
                 continue;
-			stringstream ss(line);
-			string field;
-			while (getline(ss, field, '\t')) {
-				stringstream fs(field);
-				int f = 0;
-				fs >> f;
-				locs.push_back(f);
-			}
-		}
-		file.close();
-	} else
-		cout << "Failed to open loc file: " << fname << endl;
+            stringstream ss(line);
+            string field;
+            while (getline(ss, field, '\t')) {
+                stringstream fs(field);
+                int f = 0;
+                fs >> f;
+                locs.push_back(f);
+            }
+        }
+        file.close();
+    } else
+        cout << "Failed to open loc file: " << fname << endl;
 }
 
 
