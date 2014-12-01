@@ -100,10 +100,10 @@ void getGtrans(const int& to, const int& from, const int& d, const class hmmStat
     // 4: Pr(G[j+1]=g | G[j] = g):
     a4 = exp( -p.lam * d ) + a5 ;
     if( st.Ghap[from] == st.Ghap[to] )              trG = a4; // erroneously includes 0 -> 0; overwritten on next line
-    if( ( st.Ghap[from] == 0 ) & ( st.Ghap[to] == 0 ) ) trG = a1;
-    if( st.Ghap[from] == 0 & st.Ghap[to] != 0 ) trG = a2;
-    if( st.Ghap[from] != 0 & st.Ghap[to] == 0 ) trG = a3;
-    if( st.Ghap[from] != 0 & st.Ghap[to] != 0 & st.Ghap[from] != st.Ghap[to] ) trG = a5;
+    if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] == 0 ) ) trG = a1;
+    if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] != 0 ) ) trG = a2;
+    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) ) trG = a3;
+    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] != 0 ) && ( st.Ghap[from] != st.Ghap[to] ) ) trG = a5;
     trG = log(trG);
 }
 
@@ -132,7 +132,6 @@ void getsprob(
 }
 
 double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trXbin ) {
-//int lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trXbin, double& trX ) {
     int Xswitch, Pswitch;
     double trX;
     if( st.Xpop[from] != st.Xpop[to] ) { // add logic to determine to population
@@ -160,7 +159,7 @@ double lookupXtrans(const int& to, const int& from, const int& d, const class hm
     }
     // search for existing transition within trBin:
     for(int i=0; i < trXbin.tr.size(); i++ ) {
-        if( ( trXbin.Xswitch[i] == Xswitch ) & ( trXbin.Pswitch[i] == Pswitch ) & ( trXbin.toPop[i] == st.Xpop[to] ) ) {
+        if( ( trXbin.Xswitch[i] == Xswitch ) && ( trXbin.Pswitch[i] == Pswitch ) && ( trXbin.toPop[i] == st.Xpop[to] ) ) {
             trX = trXbin.tr[i];
             // cout << "reused trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
             return(trX);
@@ -177,18 +176,17 @@ double lookupXtrans(const int& to, const int& from, const int& d, const class hm
 }
 
 double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin ) {
-//int lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin, double& trG ) {
 	double trG;
 	int type;
     if( st.Ghap[from] == st.Ghap[to] )
         type = 4;
-    if( ( st.Ghap[from] == st.Ghap[to] ) & ( st.Ghap[from] == 0 ) )
+    if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] == 0 ) )
         type = 1; // overwrites above
-    if( ( st.Ghap[from] == 0 ) & ( st.Ghap[to] == 0 ) )
+    if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] == 0 ) )
         type = 2;
-    if( ( st.Ghap[from] != 0 ) & ( st.Ghap[to] == 0 ) )
+    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) )
         type = 3;
-    if( ( st.Ghap[from] != 0 ) & ( st.Ghap[to] != 0 ) & ( st.Ghap[from] != st.Ghap[to] ) )
+    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] != 0 ) && ( st.Ghap[from] != st.Ghap[to] ) )
         type = 5;
     if( trGbin.tr.size() == 0 ) { // start:
         getGtrans( to, from, d, st, p, trG);
@@ -200,7 +198,7 @@ double lookupGtrans(const int& to, const int& from, const int& d, const class hm
     }
     // search for existing transition within trBin:
     for(int i=0; i < trGbin.tr.size(); i++ ) {
-        if( ( trGbin.type[i] == type ) & ( trGbin.toPop[i] == st.Gpop[to] ) ) {
+        if( ( trGbin.type[i] == type ) && ( trGbin.toPop[i] == st.Gpop[to] ) ) {
             trG = trGbin.tr[i];
             // cout << "reused trG = " <<  trG << " size=" << trGbin.tr.size() << endl;
             return(trG);
@@ -230,27 +228,17 @@ void forward(
     int d;
     double lsum, tmp, trXa, trGa, e;
     double negInf = - std::numeric_limits<double>::infinity();
+    trBin trXbin, trGbin;
     for(int j=1; j < sites.size() ; j++ ) {
         d = dvec[j] - dvec[j-1];
-        class trBin trXbin, trGbin;
-        // cout << trXbin.tr.size() << endl;
         double test;
         for(int t=0; t < st.states.size(); t++) {
             lsum = negInf;
             for(int f=0; f < st.states.size(); f++) {
-                // cout << "from: " << st.states[f] << " to: " << st.states[t] << "\t";
-                // lookupXtrans( t, f, d, st, p, trXbin, trX );
+                // getXtrans( t, f, d, st, p, trXa);
+                getGtrans( t, f, d, st, p, trGa);
                 trXa = lookupXtrans( t, f, d, st, p, trXbin );
-                // getXtrans( t, f, d, st, p, trX);
-                // cout << "\t" <<trX << "\t" << trG << endl;
-                trGa = lookupGtrans( t, f, d, st, p, trGbin );
-                // lookupGtrans( t, f, d, st, p, trGbin, trG );
-                // cout << "lookup trG= " << trG0 << "\t";
-                //getGtrans( t, f, d, st, p, trG);
-                // cout << "calc trG= " << trG << "\t";
-                // if( trG != trG0 )
-                //     cout << "FAIL ";
-                // cout << endl;
+                //trGa = lookupGtrans( t, f, d, st, p, trGbin );
                 tmp = fwd[j-1][f] + trXa + trGa;
                 if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
             } // end 'from' loop
@@ -263,7 +251,6 @@ void forward(
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
-        // cout << trXbin.tr.size() << endl;
         trXbin.Xswitch.clear();
         trXbin.Pswitch.clear();
         trXbin.tr.clear();
@@ -271,7 +258,6 @@ void forward(
         trGbin.tr.clear();
         trGbin.type.clear();
         trGbin.toPop.clear();
-        // cout << trXbin.tr.size() << endl;
     } // end j site loop
 }
 
@@ -283,21 +269,17 @@ void backward(
 		const class hmmStates& st,
 		const vector<int>& obs,
 		vector<vector<double> >& bwd ) {
-	// // starting prob:
-	// for(int i=0; i < st.states.size(); i++) {
-	// 	bwd[i][ bwd[i].size()-1 ] = 0.0;
-	// }
 	double e, lsum, tmp, trXa, trGa;
 	double negInf = - std::numeric_limits<double>::infinity();
 	int d;
+	trBin trXbin, trGbin;
 	for(int j = sites.size()-2; j >= 0 ; j-- ) {
 		d = dvec[j+1] - dvec[j];
-        class trBin trXbin, trGbin;
 		for(int f=0; f < st.states.size(); f++ ) {
 			lsum = negInf;
 			for(int t=0; t < st.states.size(); t++ ) {
-				//getXtrans( t, f, d, st, p, trX);
-				//getGtrans( t, f, d, st, p, trG);
+				// getXtrans( t, f, d, st, p, trXa);
+				// getGtrans( t, f, d, st, p, trGa);
 				trXa = lookupXtrans( t, f, d, st, p, trXbin);
 				trGa = lookupGtrans( t, f, d, st, p, trGbin);
 				// emission prob:
@@ -405,9 +387,9 @@ void viterbi(
     int d;
     double trXa, trGa, vmax, tmp, e;
     double negInf = - std::numeric_limits<double>::infinity();
+	trBin trXbin, trGbin;
     for(int j=1; j < sites.size() ; j++ ) {
     	d = dvec[j] - dvec[j-1];
-    	class trBin trXbin, trGbin;
     	for(int t=0; t < st.states.size(); t++ ) {
     	    vmax = negInf;
     	    for(int f=0; f < st.states.size(); f++ ) {
@@ -456,7 +438,6 @@ void viterbi(
         // find previous max state:
         t = maxix;
         vmax = negInf;
-        class trBin trXbin, trGbin;
         for(int f=0; f < st.states.size(); f++) {
             //getXtrans( t, f, d, st, p, trX);
             //getGtrans( t, f, d, st, p, trG);

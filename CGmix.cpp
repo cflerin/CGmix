@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    cout << "Starting forward algorithm...";
+    cout << "Starting forward algorithm..." << endl;;
     vector<double> sprob( st.states.size(), 0 );
     getsprob( sites[0], param, emit, st, obs, sprob );
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
@@ -103,19 +103,19 @@ int main(int argc, char *argv[]) {
     cout << "finished" << endl;
     //printMat( fwd );
 
-    cout << "Starting backward algorithm...";
+    cout << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
     backward( sites, locs, param, emit, st, obs, bwd );
     cout << "finished" << endl;
     // printMat( bwd );
 
-    cout << "Starting posterior decoding...";
+    cout << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
     postDecode( fwd, bwd, pprob);
     cout << "finished" << endl;
     // printMat( pprob );
 
-    cout << "Starting Viterbi algorithm...";
+    cout << "Starting Viterbi algorithm..." << endl;
     vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
     vector<string> vpath( sites.size() );
     vector<double> vprob( sites.size() , 0.0);

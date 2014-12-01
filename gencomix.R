@@ -48,8 +48,8 @@ start <- Sys.time()
 sitefname <- "data/CEU-YRI_full.ldhat.sites"
 locfname <- "data/CEU-YRI_full.ldhat.locs"
 
-n1h <- 20 # 99
-n2h <- 20 # 107
+n1h <- 10 # 99
+n2h <- 10 # 107
 
 tmp <- scan( sitefname, what=character(), skip=1, quiet=TRUE)
 hapnames <- gsub("^>","",tmp[ seq(1,length(tmp),by=2) ])
@@ -59,7 +59,7 @@ names(hap)[1:(n1h*2)] <- paste("p1-",hapnames[1:(n1h*2)],sep="")
 names(hap)[(n1h*2+1):length(hap)] <- paste("p2-",hapnames[(n1h*2+1):length(hap)],sep="")
 
 # reduce the haplotype size:
-hsize <- 1000 # 20 # 11200
+hsize <- 30 # 100 # 1000 # 20 # 11200
 hap <- lapply(hap,function(x) x[1:hsize] )
 
 # cut down hap in size
@@ -82,11 +82,14 @@ sampHap <- list()
 S <- length(hap[[1]])
 nbreaks <- 4
 #bp <- sort(sample(S-2,nbreaks)) +1
-#bp <- c(4,7,12) 
-bp <- c(69,117,193,947)
+#bp <- c(4,7,12) # 20
+#bp <- c(69,117,193,947) # 1000
+#bp <- c(13,68,70,106) # 200
+bp <- c(9,12,14,21) # 200
+
 
 refH1mix <- 11 #5 # sample(1:length(refH1),1)
-refH2mix <- 38 #5 # sample(1:length(refH2),1)
+refH2mix <- 15 #38 #5 # sample(1:length(refH2),1)
 
 m <- cbind(
     refH1[[refH1mix]] ,
