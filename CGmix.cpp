@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, locs, param, emit, st, obs, sprob, fwd );
     cout << "finished" << endl;
-    //printMat( fwd );
+    printMat( fwd );
 
     cout << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));

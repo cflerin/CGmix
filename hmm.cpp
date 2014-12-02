@@ -131,48 +131,28 @@ void getsprob(
     }
 }
 
-double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trXbin ) {
-    int Xswitch, Pswitch;
+double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, vector<double>& trXbin ) {
+    int type;
     double trX;
-    if( st.Xpop[from] != st.Xpop[to] ) { // add logic to determine to population
-        Xswitch = 1;
-        Pswitch = 1;
+    if( st.Xpop[from] != st.Xpop[to] ) {
+        type = 0;
     } else {
-        if( st.Xhap[from] == st.Xhap[to] ) {
-            Xswitch = 0;
-            Pswitch = 0;
-        }
         if( st.Xhap[from] != st.Xhap[to] ) {
-            Xswitch = 1;
-            Pswitch = 0;
+            type = 1;
+        } else { // if( st.Xhap[from] == st.Xhap[to] )
+            type = 2;
         }
     }
-    // cout << "Xsw " << Xswitch << " Psw " << Pswitch << " toPop " << st.Xpop[to] << " ";
-    if( trXbin.tr.size() == 0 ) { // start:
+    if( st.Xpop[to] == 2 ) // shift type index by 3 if transitioning to a haplotype in pop #2.
+        type += 3;
+    if( trXbin[ type ] == 99 ) { // this transition hasn't been set yet:
         getXtrans( to, from, d, st, p, trX);
-        trXbin.tr.push_back( trX );
-        trXbin.Xswitch.push_back( Xswitch );
-        trXbin.Pswitch.push_back( Pswitch );
-        trXbin.toPop.push_back( st.Xpop[to] );
-        // cout << endl << "started trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
-        return(trX);
+        trXbin[ type ] = trX;
+        return( trX );
+    } else { // lookup and return a value already seen:
+        trX = trXbin[ type ];
+        return( trX );
     }
-    // search for existing transition within trBin:
-    for(int i=0; i < trXbin.tr.size(); i++ ) {
-        if( ( trXbin.Xswitch[i] == Xswitch ) && ( trXbin.Pswitch[i] == Pswitch ) && ( trXbin.toPop[i] == st.Xpop[to] ) ) {
-            trX = trXbin.tr[i];
-            // cout << "reused trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
-            return(trX);
-        }
-    }
-    // generate new transition if not found above:
-    getXtrans( to, from, d, st, p, trX);
-    trXbin.tr.push_back( trX );
-    trXbin.Xswitch.push_back( Xswitch );
-    trXbin.Pswitch.push_back( Pswitch );
-    trXbin.toPop.push_back( st.Xpop[to] );
-    // cout << "added trX = " <<  trX << " size=" << trXbin.tr.size() << endl;
-    return(trX);
 }
 
 double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin ) {
@@ -228,16 +208,27 @@ void forward(
     int d;
     double lsum, tmp, trXa, trGa, e;
     double negInf = - std::numeric_limits<double>::infinity();
-    trBin trXbin, trGbin;
+    //trBin trXbin, trGbin;
+    vector<double> trXbin(6,99);
+    trBin trGbin;
+    int cnt;
     for(int j=1; j < sites.size() ; j++ ) {
+        //cout << "XXXXXXX| j=" << j << endl;
         d = dvec[j] - dvec[j-1];
-        double test;
+        //double test;
         for(int t=0; t < st.states.size(); t++) {
             lsum = negInf;
             for(int f=0; f < st.states.size(); f++) {
-                // getXtrans( t, f, d, st, p, trXa);
-                getGtrans( t, f, d, st, p, trGa);
+                //getXtrans( t, f, d, st, p, trXa);
+                //test = trXa;
                 trXa = lookupXtrans( t, f, d, st, p, trXbin );
+                //cout << "from: " << st.states[f] << " to: " << st.states[t] << "\t";
+                //cout << "realtrX= " << test << " lookuptrX= " << trXa << endl;
+                //if( test != trXa ) {
+                //    cout << "FAIL" << endl;
+                //    exit(1);
+                //}
+                getGtrans( t, f, d, st, p, trGa);
                 //trGa = lookupGtrans( t, f, d, st, p, trGbin );
                 tmp = fwd[j-1][f] + trXa + trGa;
                 if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
@@ -251,10 +242,18 @@ void forward(
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
-        trXbin.Xswitch.clear();
-        trXbin.Pswitch.clear();
-        trXbin.tr.clear();
-        trXbin.toPop.clear();
+        cnt = 0;
+        for(int k=0; k < trXbin.size(); k++) {
+            if( trXbin[k] == 99 )
+                cout << trXbin[k] << "\t" ;
+                cnt++;
+        }
+        // cout << "trXbin99: " <<  cnt << " trGbin: " << trGbin.tr.size() << endl;
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        // trXbin.Xswitch.clear();
+        // trXbin.Pswitch.clear();
+        // trXbin.tr.clear();
+        // trXbin.toPop.clear();
         trGbin.tr.clear();
         trGbin.type.clear();
         trGbin.toPop.clear();
@@ -278,10 +277,10 @@ void backward(
 		for(int f=0; f < st.states.size(); f++ ) {
 			lsum = negInf;
 			for(int t=0; t < st.states.size(); t++ ) {
-				// getXtrans( t, f, d, st, p, trXa);
-				// getGtrans( t, f, d, st, p, trGa);
-				trXa = lookupXtrans( t, f, d, st, p, trXbin);
-				trGa = lookupGtrans( t, f, d, st, p, trGbin);
+				getXtrans( t, f, d, st, p, trXa);
+				getGtrans( t, f, d, st, p, trGa);
+				//trXa = lookupXtrans( t, f, d, st, p, trXbin);
+				//trGa = lookupGtrans( t, f, d, st, p, trGbin);
 				// emission prob:
 				if( sites[j+1][ st.Gindx[t] ] == obs[j+1] ) {
 					e = emit.match;
@@ -293,10 +292,10 @@ void backward(
 			} // t loop
 			bwd[j][f] = lsum;
 		} // f loop
-        trXbin.Xswitch.clear();
-        trXbin.Pswitch.clear();
-        trXbin.tr.clear();
-        trXbin.toPop.clear();
+        // trXbin.Xswitch.clear();
+        // trXbin.Pswitch.clear();
+        // trXbin.tr.clear();
+        // trXbin.toPop.clear();
         trGbin.tr.clear();
         trGbin.type.clear();
         trGbin.toPop.clear();
@@ -393,10 +392,10 @@ void viterbi(
     	for(int t=0; t < st.states.size(); t++ ) {
     	    vmax = negInf;
     	    for(int f=0; f < st.states.size(); f++ ) {
-    	    	//getXtrans( t, f, d, st, p, trX);
-    	    	//getGtrans( t, f, d, st, p, trG);
-				trXa = lookupXtrans( t, f, d, st, p, trXbin);
-				trGa = lookupGtrans( t, f, d, st, p, trGbin);
+    	    	getXtrans( t, f, d, st, p, trXa);
+    	    	getGtrans( t, f, d, st, p, trGa);
+				//trXa = lookupXtrans( t, f, d, st, p, trXbin);
+				//trGa = lookupGtrans( t, f, d, st, p, trGbin);
                 tmp = vit[j-1][f] + trXa + trGa;
                 if( tmp > vmax )
                     vmax = tmp;
@@ -409,10 +408,10 @@ void viterbi(
     	    }
     	    vit[j][t] = e + vmax;
     	} // end to loop
-        trXbin.Xswitch.clear();
-        trXbin.Pswitch.clear();
-        trXbin.tr.clear();
-        trXbin.toPop.clear();
+        // trXbin.Xswitch.clear();
+        // trXbin.Pswitch.clear();
+        // trXbin.tr.clear();
+        // trXbin.toPop.clear();
         trGbin.tr.clear();
         trGbin.type.clear();
         trGbin.toPop.clear();
@@ -439,10 +438,10 @@ void viterbi(
         t = maxix;
         vmax = negInf;
         for(int f=0; f < st.states.size(); f++) {
-            //getXtrans( t, f, d, st, p, trX);
-            //getGtrans( t, f, d, st, p, trG);
-			trXa = lookupXtrans( t, f, d, st, p, trXbin);
-			trGa = lookupGtrans( t, f, d, st, p, trGbin);
+            getXtrans( t, f, d, st, p, trXa);
+            getGtrans( t, f, d, st, p, trGa);
+			//trXa = lookupXtrans( t, f, d, st, p, trXbin);
+			//trGa = lookupGtrans( t, f, d, st, p, trGbin);
             tmp = vit[j][f] + trXa + trGa;
             if( tmp > vmax ) {
                 vmax = tmp;
@@ -452,10 +451,10 @@ void viterbi(
         vpath[j] = st.states[ maxix ];
         vprob[j] = pprob[j][maxix];
         // cout << vpath[j] << " " << vmax << " " << maxix << endl;
-        trXbin.Xswitch.clear();
-        trXbin.Pswitch.clear();
-        trXbin.tr.clear();
-        trXbin.toPop.clear();
+        // trXbin.Xswitch.clear();
+        // trXbin.Pswitch.clear();
+        // trXbin.tr.clear();
+        // trXbin.toPop.clear();
         trGbin.tr.clear();
         trGbin.type.clear();
         trGbin.toPop.clear();

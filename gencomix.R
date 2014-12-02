@@ -48,8 +48,8 @@ start <- Sys.time()
 sitefname <- "data/CEU-YRI_full.ldhat.sites"
 locfname <- "data/CEU-YRI_full.ldhat.locs"
 
-n1h <- 10 # 99
-n2h <- 10 # 107
+n1h <- 3 #10 # 99
+n2h <- 3 #10 # 107
 
 tmp <- scan( sitefname, what=character(), skip=1, quiet=TRUE)
 hapnames <- gsub("^>","",tmp[ seq(1,length(tmp),by=2) ])
@@ -59,7 +59,7 @@ names(hap)[1:(n1h*2)] <- paste("p1-",hapnames[1:(n1h*2)],sep="")
 names(hap)[(n1h*2+1):length(hap)] <- paste("p2-",hapnames[(n1h*2+1):length(hap)],sep="")
 
 # reduce the haplotype size:
-hsize <- 30 # 100 # 1000 # 20 # 11200
+hsize <- 20 # 100 # 1000 # 20 # 11200
 hap <- lapply(hap,function(x) x[1:hsize] )
 
 # cut down hap in size

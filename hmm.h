@@ -64,9 +64,7 @@ void getsprob(
         const vector<int>& obs,
         vector<double>& sprob );
 
-//int lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trXbin, double& trX );
-//int lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin, double& trG );
-double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trXbin );
+double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, vector<double>& trXbin );
 double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin );
 
 void forward( 
