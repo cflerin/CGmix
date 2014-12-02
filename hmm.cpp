@@ -155,42 +155,31 @@ double lookupXtrans(const int& to, const int& from, const int& d, const class hm
     }
 }
 
-double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, class trBin& trGbin ) {
+double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, vector<double>& trGbin ) {
 	double trG;
 	int type;
     if( st.Ghap[from] == st.Ghap[to] )
-        type = 4;
-    if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] == 0 ) )
-        type = 1; // overwrites above
-    if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] == 0 ) )
-        type = 2;
-    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) )
         type = 3;
+    if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] == 0 ) )
+        type = 0; // overwrites above
+    if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] != 0 ) )
+        type = 1;
+    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) )
+        type = 2;
     if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] != 0 ) && ( st.Ghap[from] != st.Ghap[to] ) )
-        type = 5;
-    if( trGbin.tr.size() == 0 ) { // start:
+        type = 4;
+    if( st.Gpop[to] == 2 ) // shift type index by 3 if transitioning to a haplotype in pop #2.
+        type += 5;
+    //cout << " from" << st.Ghap[from] << " to" << st.Ghap[to];
+    //cout << " type" << type << " ";
+    if( trGbin[ type ] == 99 ) { // this transition hasn't been set yet:
         getGtrans( to, from, d, st, p, trG);
-        trGbin.tr.push_back( trG );
-        trGbin.type.push_back( type );
-        trGbin.toPop.push_back( st.Gpop[to] );
-        // cout << endl << "started trG = " <<  trG << " size=" << trGbin.tr.size() << endl;
-        return(trG);
+        trGbin[ type ] = trG;
+        return( trG );
+    } else { // lookup and return a value already seen:
+        trG = trGbin[ type ];
+        return( trG );
     }
-    // search for existing transition within trBin:
-    for(int i=0; i < trGbin.tr.size(); i++ ) {
-        if( ( trGbin.type[i] == type ) && ( trGbin.toPop[i] == st.Gpop[to] ) ) {
-            trG = trGbin.tr[i];
-            // cout << "reused trG = " <<  trG << " size=" << trGbin.tr.size() << endl;
-            return(trG);
-        }
-    }
-    // generate new transition if not found above:
-    getGtrans( to, from, d, st, p, trG);
-    trGbin.tr.push_back( trG );
-    trGbin.type.push_back( type );
-    trGbin.toPop.push_back( st.Gpop[to] );
-    // cout << "added trG = " <<  trG << " size=" << trGbin.tr.size() << endl;
-    return(trG);
 }
 
 void forward( 
@@ -202,15 +191,13 @@ void forward(
         const vector<int>& obs,
         const vector<double>& sprob,
         vector<vector<double> >& fwd ) {
-    // cout << fwd.size() << " " << fwd[0].size() << endl;
     // starting prob: 
     fwd[0] = sprob;
     int d;
     double lsum, tmp, trXa, trGa, e;
     double negInf = - std::numeric_limits<double>::infinity();
-    //trBin trXbin, trGbin;
     vector<double> trXbin(6,99);
-    trBin trGbin;
+    vector<double> trGbin(10,99);
     int cnt;
     for(int j=1; j < sites.size() ; j++ ) {
         //cout << "XXXXXXX| j=" << j << endl;
@@ -220,16 +207,16 @@ void forward(
             lsum = negInf;
             for(int f=0; f < st.states.size(); f++) {
                 //getXtrans( t, f, d, st, p, trXa);
-                //test = trXa;
                 trXa = lookupXtrans( t, f, d, st, p, trXbin );
                 //cout << "from: " << st.states[f] << " to: " << st.states[t] << "\t";
-                //cout << "realtrX= " << test << " lookuptrX= " << trXa << endl;
-                //if( test != trXa ) {
+                //getGtrans( t, f, d, st, p, trGa);
+                //test = trGa;
+                trGa = lookupGtrans( t, f, d, st, p, trGbin );
+                //cout << "realtrG= " << test << " lookuptrG= " << trGa << endl;
+                //if( test != trGa ) {
                 //    cout << "FAIL" << endl;
                 //    exit(1);
                 //}
-                getGtrans( t, f, d, st, p, trGa);
-                //trGa = lookupGtrans( t, f, d, st, p, trGbin );
                 tmp = fwd[j-1][f] + trXa + trGa;
                 if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
             } // end 'from' loop
@@ -242,21 +229,15 @@ void forward(
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
-        cnt = 0;
-        for(int k=0; k < trXbin.size(); k++) {
-            if( trXbin[k] == 99 )
-                cout << trXbin[k] << "\t" ;
-                cnt++;
-        }
+        // cnt = 0;
+        // for(int k=0; k < trXbin.size(); k++) {
+        //     if( trXbin[k] == 99 )
+        //         cout << trXbin[k] << "\t" ;
+        //         cnt++;
+        // }
         // cout << "trXbin99: " <<  cnt << " trGbin: " << trGbin.tr.size() << endl;
         std::fill( trXbin.begin(), trXbin.end(), 99 );
-        // trXbin.Xswitch.clear();
-        // trXbin.Pswitch.clear();
-        // trXbin.tr.clear();
-        // trXbin.toPop.clear();
-        trGbin.tr.clear();
-        trGbin.type.clear();
-        trGbin.toPop.clear();
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
     } // end j site loop
 }
 
@@ -271,16 +252,17 @@ void backward(
 	double e, lsum, tmp, trXa, trGa;
 	double negInf = - std::numeric_limits<double>::infinity();
 	int d;
-	trBin trXbin, trGbin;
+    vector<double> trXbin(6,99);
+    vector<double> trGbin(10,99);
 	for(int j = sites.size()-2; j >= 0 ; j-- ) {
 		d = dvec[j+1] - dvec[j];
 		for(int f=0; f < st.states.size(); f++ ) {
 			lsum = negInf;
 			for(int t=0; t < st.states.size(); t++ ) {
-				getXtrans( t, f, d, st, p, trXa);
-				getGtrans( t, f, d, st, p, trGa);
-				//trXa = lookupXtrans( t, f, d, st, p, trXbin);
-				//trGa = lookupGtrans( t, f, d, st, p, trGbin);
+				//getXtrans( t, f, d, st, p, trXa);
+				//getGtrans( t, f, d, st, p, trGa);
+				trXa = lookupXtrans( t, f, d, st, p, trXbin);
+				trGa = lookupGtrans( t, f, d, st, p, trGbin);
 				// emission prob:
 				if( sites[j+1][ st.Gindx[t] ] == obs[j+1] ) {
 					e = emit.match;
@@ -292,13 +274,15 @@ void backward(
 			} // t loop
 			bwd[j][f] = lsum;
 		} // f loop
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
         // trXbin.Xswitch.clear();
         // trXbin.Pswitch.clear();
         // trXbin.tr.clear();
         // trXbin.toPop.clear();
-        trGbin.tr.clear();
-        trGbin.type.clear();
-        trGbin.toPop.clear();
+        // trGbin.tr.clear();
+        // trGbin.type.clear();
+        // trGbin.toPop.clear();
 	} // j loop
 }
 
@@ -386,16 +370,17 @@ void viterbi(
     int d;
     double trXa, trGa, vmax, tmp, e;
     double negInf = - std::numeric_limits<double>::infinity();
-	trBin trXbin, trGbin;
+    vector<double> trXbin(6,99);
+    vector<double> trGbin(10,99);
     for(int j=1; j < sites.size() ; j++ ) {
     	d = dvec[j] - dvec[j-1];
     	for(int t=0; t < st.states.size(); t++ ) {
     	    vmax = negInf;
     	    for(int f=0; f < st.states.size(); f++ ) {
-    	    	getXtrans( t, f, d, st, p, trXa);
-    	    	getGtrans( t, f, d, st, p, trGa);
-				//trXa = lookupXtrans( t, f, d, st, p, trXbin);
-				//trGa = lookupGtrans( t, f, d, st, p, trGbin);
+    	    	//getXtrans( t, f, d, st, p, trXa);
+    	    	//getGtrans( t, f, d, st, p, trGa);
+				trXa = lookupXtrans( t, f, d, st, p, trXbin);
+				trGa = lookupGtrans( t, f, d, st, p, trGbin);
                 tmp = vit[j-1][f] + trXa + trGa;
                 if( tmp > vmax )
                     vmax = tmp;
@@ -412,9 +397,11 @@ void viterbi(
         // trXbin.Pswitch.clear();
         // trXbin.tr.clear();
         // trXbin.toPop.clear();
-        trGbin.tr.clear();
-        trGbin.type.clear();
-        trGbin.toPop.clear();
+        // trGbin.tr.clear();
+        // trGbin.type.clear();
+        // trGbin.toPop.clear();
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
     } // end j loop
     // termination:
     int maxix = -1;
@@ -438,10 +425,10 @@ void viterbi(
         t = maxix;
         vmax = negInf;
         for(int f=0; f < st.states.size(); f++) {
-            getXtrans( t, f, d, st, p, trXa);
-            getGtrans( t, f, d, st, p, trGa);
-			//trXa = lookupXtrans( t, f, d, st, p, trXbin);
-			//trGa = lookupGtrans( t, f, d, st, p, trGbin);
+            //getXtrans( t, f, d, st, p, trXa);
+            //getGtrans( t, f, d, st, p, trGa);
+			trXa = lookupXtrans( t, f, d, st, p, trXbin);
+			trGa = lookupGtrans( t, f, d, st, p, trGbin);
             tmp = vit[j][f] + trXa + trGa;
             if( tmp > vmax ) {
                 vmax = tmp;
@@ -455,9 +442,11 @@ void viterbi(
         // trXbin.Pswitch.clear();
         // trXbin.tr.clear();
         // trXbin.toPop.clear();
-        trGbin.tr.clear();
-        trGbin.type.clear();
-        trGbin.toPop.clear();
+        // trGbin.tr.clear();
+        // trGbin.type.clear();
+        // trGbin.toPop.clear();
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
     }
 }
 

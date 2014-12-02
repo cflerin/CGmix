@@ -407,6 +407,8 @@ for(j in (S-1):1 ) {
 }
 cat("done in ",format(Sys.time()-start1),"\n")
 
+cbind(vprob,vpath)
+
 path <- numeric(S)
 names(path) <- vpath
 
