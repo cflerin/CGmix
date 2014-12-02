@@ -138,8 +138,7 @@ int main(int argc, char *argv[]) {
         // cout << j << "\t" << 1-gcprob[j] << " " << endl;
         cout << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << vprob[j] << "\t" << 1-gcprob[j] << endl;
     }
-/*
-*/
+
 }
 
 
