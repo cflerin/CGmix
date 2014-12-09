@@ -82,7 +82,8 @@ void logSumExp( const vector<double>& vec, double& lse );
 void postDecode(
 		const vector<vector<double> >& fwd,
 		const vector<vector<double> >& bwd,
-		vector<vector<double> >& pprob
+		vector<vector<double> >& pprob,
+        ofstream &logfile
 		);
 
 void viterbi(

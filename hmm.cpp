@@ -327,11 +327,12 @@ void logSumExp( const vector<double>& vec, double& lse ) {
 void postDecode(
         const vector<vector<double> >& fwd,
         const vector<vector<double> >& bwd,
-        vector<vector<double> >& pprob
+        vector<vector<double> >& pprob,
+        ofstream &logfile
         ) {
     double Pxa, tmp;
     logSumExp( fwd[ fwd.size()-1 ], Pxa );
-    cout << "Pxa= " << Pxa << endl;
+    logfile << "Pxa= " << Pxa << endl;
     double negInf = - std::numeric_limits<double>::infinity();
     // backward:
     double Pxb = bwd[0][0] + fwd[0][0];
@@ -340,7 +341,7 @@ void postDecode(
         if( tmp > negInf ) 
             Pxb = tmp + log( 1 + exp( Pxb - tmp ) );
     }
-    cout << "Pxb= " << Pxb << endl;
+    logfile << "Pxb= " << Pxb << endl;
     // decoding:
     for(int j=0; j < fwd.size(); j++ ) {
         for(int i=0; i < fwd[0].size(); i++ ) {
