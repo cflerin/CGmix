@@ -327,7 +327,10 @@ void logSumExp( const vector<double>& vec, double& lse ) {
 void postDecode(
         const vector<vector<double> >& fwd,
         const vector<vector<double> >& bwd,
+        const class hmmStates& st,
         vector<vector<double> >& pprob,
+        vector<string>& pppath,
+        vector<double>& ppprob,
         ofstream &logfile
         ) {
     double Pxa, tmp;
@@ -368,6 +371,19 @@ void postDecode(
             pprob[j][i] = exp( pprob[j][i] ) / csum;
         }
     }
+    // find most proable path:
+    int maxix = -1;
+    double pmax = negInf;
+    for(int j=0; j < pprob.size(); j++ ) {
+        for(int i=0; i < pprob[0].size(); i++ ) {
+            if( pprob[j][i] > pmax ) {
+                pmax = pprob[j][i];
+                maxix = i;
+            }
+        }
+        ppprob[j] = pprob[j][maxix];
+        pppath[j] = st.states[maxix];
+    }
 }
 
 void viterbi(
@@ -377,7 +393,7 @@ void viterbi(
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
-        const vector<vector<double> >& pprob,
+        //const vector<vector<double> >& pprob,
         const vector<double>& sprob,
         vector<vector<double> >& vit,
         vector<string>& vpath,
@@ -427,7 +443,8 @@ void viterbi(
         }
     } 
     vpath[j] = st.states[maxix];
-    vprob[j] = pprob[j][maxix];
+    // vprob[j] = pprob[j][maxix];
+    vprob[j] = vit[j][maxix];
     // cout << vpath[j] << " " << vmax << " " << maxix << endl;
     // traceback:
     int t;
@@ -447,7 +464,8 @@ void viterbi(
             }
         }
         vpath[j] = st.states[ maxix ];
-        vprob[j] = pprob[j][maxix];
+        // vprob[j] = pprob[j][maxix];
+        vprob[j] = vit[j][maxix];
         // cout << vpath[j] << " " << vmax << " " << maxix << endl;
         std::fill( trXbin.begin(), trXbin.end(), 99 );
         std::fill( trGbin.begin(), trGbin.end(), 99 );

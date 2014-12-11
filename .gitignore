@@ -7,3 +7,7 @@ old/
 distributions.R
 *test*
 *out
+*hapnames
+*sites
+*locs
+

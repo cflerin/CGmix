@@ -72,7 +72,8 @@ int main(int argc, char *argv[]) {
     param.T = 7;
     param.u1 = 0.8;
     param.rho = 1.0/1000000;
-    param.gam = 1.0/10000;
+    param.gam = 1.0/100000;
+    //param.gam = 1.0/10000;
     param.lam = 1.0/500;
     param.theta = 1.0/1000;
     logfile << "Parameters set:" << endl;
@@ -116,7 +117,9 @@ int main(int argc, char *argv[]) {
 
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
-    postDecode( fwd, bwd, pprob, logfile);
+    vector<string> pppath( sites.size() );
+    vector<double> ppprob( sites.size() , 0.0);
+    postDecode( fwd, bwd, st, pprob, pppath, ppprob, logfile);
     logfile << "finished" << endl;
     // printMat( pprob );
 
@@ -124,14 +127,15 @@ int main(int argc, char *argv[]) {
     vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
     vector<string> vpath( sites.size() );
     vector<double> vprob( sites.size() , 0.0);
-    viterbi( sites, locs, param, emit, st, obs, pprob, sprob, vit, vpath, vprob );
+    // viterbi( sites, locs, param, emit, st, obs, pprob, sprob, vit, vpath, vprob );
+    viterbi( sites, locs, param, emit, st, obs, sprob, vit, vpath, vprob );
     // printMat( vit );
     logfile << "finished" << endl;
 
     // output Viterbi path and probabilites:
     vector<double> gcprob( sites.size(), 0.0 );
     double csum;
-    logfile << "site\tppos\tpath\tpathProb\tGCProb" << endl;
+    logfile << "site\tppos\tVpath\tVpathProb\tPpath\tPpathProb\tGCProb" << endl;
     for(int j=0; j < pprob.size(); j++ ) {
         csum =0.0;
         for(int i=0; i < st.states.size(); i++ ) {
@@ -141,7 +145,7 @@ int main(int argc, char *argv[]) {
         }
         gcprob[j] = 1.0 - csum;
         // cout << j << "\t" << 1-gcprob[j] << " " << endl;
-        logfile << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << vprob[j] << "\t" << 1-gcprob[j] << endl;
+        logfile << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << 1-gcprob[j] << endl;
     }
 
     logfile.close();

@@ -82,7 +82,10 @@ void logSumExp( const vector<double>& vec, double& lse );
 void postDecode(
 		const vector<vector<double> >& fwd,
 		const vector<vector<double> >& bwd,
+        const class hmmStates& st,
 		vector<vector<double> >& pprob,
+        vector<string>& pppath,
+        vector<double>& ppprob,
         ofstream &logfile
 		);
 
@@ -93,7 +96,7 @@ void viterbi(
 		const struct emissions& emit,
 		const class hmmStates& st,
 		const vector<int>& obs,
-        const vector<vector<double> >& pprob,
+        // const vector<vector<double> >& pprob,
         const vector<double>& sprob,
 		vector<vector<double> >& vit,
 		vector<string>& vpath,
