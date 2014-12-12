@@ -24,6 +24,8 @@ int main(int argc, char *argv[]) {
     string fname = argv[1];
     string logf = fname + ".log";
     ofstream logfile ( logf.c_str() );
+    string matf = fname + ".mat";
+    ofstream matfile ( matf.c_str() );
     logfile << argv[0] << " " << argv[1] << endl;
     // read in data:
     vector<vector<int> > sites;
@@ -122,6 +124,7 @@ int main(int argc, char *argv[]) {
     postDecode( fwd, bwd, st, pprob, pppath, ppprob, logfile);
     logfile << "finished" << endl;
     // printMat( pprob );
+    writeMat( pprob, matfile );
 
     logfile << "Starting Viterbi algorithm..." << endl;
     vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));

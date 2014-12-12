@@ -312,6 +312,15 @@ void printMat( const vector<vector<double> >& mat ) {
     }
 }
 
+void writeMat( const vector<vector<double> >& mat, ofstream &matfile ) {
+    for(int i=0; i < mat[0].size(); i++ ) {
+        for(int j=0; j < mat.size(); j++ ) {
+            matfile << setprecision(15) << mat[j][i] << " ";
+        }
+        matfile << endl;
+    }
+}
+
 void logSumExp( const vector<double>& vec, double& lse ) {
     double max = - std::numeric_limits<double>::infinity();
     lse = 0.0;
@@ -373,8 +382,9 @@ void postDecode(
     }
     // find most proable path:
     int maxix = -1;
-    double pmax = negInf;
+    double pmax;
     for(int j=0; j < pprob.size(); j++ ) {
+        pmax = negInf;
         for(int i=0; i < pprob[0].size(); i++ ) {
             if( pprob[j][i] > pmax ) {
                 pmax = pprob[j][i];

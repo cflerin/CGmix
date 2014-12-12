@@ -78,6 +78,7 @@ void backward(
 		vector<vector<double> >& bwd );
 
 void printMat( const vector<vector<double> >& mat );
+void writeMat( const vector<vector<double> >& mat, ofstream &matfile );
 void logSumExp( const vector<double>& vec, double& lse );
 void postDecode(
 		const vector<vector<double> >& fwd,
