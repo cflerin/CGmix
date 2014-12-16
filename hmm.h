@@ -21,6 +21,8 @@
 
 using namespace std;
 
+extern int gMode;
+
 struct parameters {
     int n1, n2, S;
     double T, 
@@ -43,11 +45,19 @@ class hmmStates
 };
 
 void generateStates(const class hapDef& hapInfo, class hmmStates& st );
+void generateXstates(const class hapDef& hapInfo, class hmmStates& st );
 
 void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX );
 void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG );
 
 void getsprob( 
+        const vector<int>& sites0, 
+        const struct parameters& p, 
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const vector<int>& obs,
+        vector<double>& sprob );
+void getsprobX( 
         const vector<int>& sites0, 
         const struct parameters& p, 
         const struct emissions& emit,

@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <vector>
 #include <string>
+#include <string.h>
 #include <iostream>
 #include <fstream> // read files
 #include <sstream>
@@ -14,19 +15,28 @@
 
 using namespace std;
 
+int gMode;
+
 int main(int argc, char *argv[]) {
-    if( argc < 2 ) {
+    if( argc < 3 ) {
         //std::cerr << "Usage: " << argv[0] << " sites locs hapnames" << std::endl;
-        std::cerr << "Usage: " << argv[0] << " [file prefix, with *.sites, *.locs *.hapnames endings]" << std::endl;
+        //std::cerr << "Usage: " << argv[0] << " [file prefix, with *.sites, *.locs *.hapnames endings]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " [file prefix, with *.sites, *.locs *.hapnames endings] [0: full model; 1: limit to crossover analysis]" << std::endl;
         return 1;
     }
-    //cout << argv[0] << " " << argv[1] << " " << argv[2] << " " << argv[3] << endl;
+    // cout << argv[0] << " " << argv[1] << " " << argv[2] << " " << argv[3] << endl;
+    if( strcmp( argv[2] , "1" ) == 0 ) // run in haplotype-only mode
+        gMode = 1; //atoi( argv[2] );
+    else // run full model
+        gMode = 0;
+    //
     string fname = argv[1];
-    string logf = fname + ".log";
+    string logf = fname + ".log" + std::to_string(gMode);
     ofstream logfile ( logf.c_str() );
-    string matf = fname + ".mat";
+    string matf = fname + ".mat" + std::to_string(gMode);
     ofstream matfile ( matf.c_str() );
     logfile << argv[0] << " " << argv[1] << endl;
+
     // read in data:
     vector<vector<int> > sites;
     readSites( fname + ".sites", sites );
@@ -55,9 +65,6 @@ int main(int argc, char *argv[]) {
         // cout << hapInfo.hapName[i] << " " << hapInfo.hapPop[i] << " " << hapInfo.hN[i] << " " << hapInfo.hP[i] << endl;
     }
     logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
-    hmmStates st;
-    generateStates( hapInfo, st );
-    logfile << "Generated " << st.states.size() << " states" << endl;
 
     // set/get parameters:
     parameters param;
@@ -69,7 +76,6 @@ int main(int argc, char *argv[]) {
         if( hapInfo.hapPop[i] == "p2" )
             param.n2 += 1;
     }
-    // cout << "n1= " << param.n1 << " | n2= " << param.n2 << endl;
     param.S = locs.size() ;
     param.T = 7;
     param.u1 = 0.8;
@@ -78,6 +84,15 @@ int main(int argc, char *argv[]) {
     //param.gam = 1.0/10000;
     param.lam = 1.0/500;
     param.theta = 1.0/1000;
+
+    hmmStates st;
+    if( gMode == 1 ) {
+        generateXstates( hapInfo, st );
+        param.theta = 1.0/100000;
+    } else
+        generateStates( hapInfo, st );
+    logfile << "Generated " << st.states.size() << " states" << endl;
+
     logfile << "Parameters set:" << endl;
     logfile << "n1 = " << param.n1 << endl;
     logfile << "n2 = " << param.n2 << endl;
@@ -103,13 +118,23 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    if( gMode == 1 )
+        logfile << "Model: haplotype-only" << endl;
+    else
+        logfile << "Model: full haplotype and gene conversion" << endl;
+
+
     logfile << "Starting forward algorithm..." << endl;;
     vector<double> sprob( st.states.size(), 0 );
-    getsprob( sites[0], param, emit, st, obs, sprob );
+    if( gMode == 1 ) {
+        getsprobX( sites[0], param, emit, st, obs, sprob );
+    } else {
+        getsprob( sites[0], param, emit, st, obs, sprob );
+    }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, locs, param, emit, st, obs, sprob, fwd );
     logfile << "finished" << endl;
-    //printMat( fwd );
+    // printMat( fwd );
 
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
@@ -141,10 +166,12 @@ int main(int argc, char *argv[]) {
     logfile << "site\tppos\tVpath\tVpathProb\tPpath\tPpathProb\tGCProb" << endl;
     for(int j=0; j < pprob.size(); j++ ) {
         csum =0.0;
-        for(int i=0; i < st.states.size(); i++ ) {
-            if( st.Ghap[i] == 0 ) 
-                continue;
-            csum += pprob[j][i];
+        if( gMode == 0 ) {
+            for(int i=0; i < st.states.size(); i++ ) {
+                if( st.Ghap[i] == 0 )
+                    continue;
+                csum += pprob[j][i];
+            }
         }
         gcprob[j] = 1.0 - csum;
         // cout << j << "\t" << 1-gcprob[j] << " " << endl;
