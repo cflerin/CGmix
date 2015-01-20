@@ -8,6 +8,7 @@
 #ifndef HMM_H_
 #define HMM_H_
 
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -77,41 +78,80 @@ void forward(
         const vector<int>& obs,
         const vector<double>& sprob,
         vector<vector<double> >& fwd );
+void forward2( 
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const class hmmStates& st2,
+        const vector<int>& obs,
+        const vector<double>& sprob,
+        const vector<int>& pswitch,
+        vector<vector<double> >& fwd );
 
 void backward(
-		const vector<vector<int> >& sites,
-		const vector<int>& dvec,
-		const struct parameters& p,
-		const struct emissions& emit,
-		const class hmmStates& st,
-		const vector<int>& obs,
-		vector<vector<double> >& bwd );
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const vector<int>& obs,
+        const vector<double>& sprob,
+        vector<vector<double> >& bwd,
+        double& Pxb );
+void backward2(
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const class hmmStates& st2,
+        const vector<int>& obs,
+        const vector<double>& sprob,
+        const vector<int>& pswitch,
+        vector<vector<double> >& bwd,
+        double& Pxb);
 
 void printMat( const vector<vector<double> >& mat );
 void writeMat( const vector<vector<double> >& mat, ofstream &matfile );
+void writeTmat( const vector<vector<double> >& mat, ofstream &matfile );
 void logSumExp( const vector<double>& vec, double& lse );
 void postDecode(
-		const vector<vector<double> >& fwd,
-		const vector<vector<double> >& bwd,
-        const class hmmStates& st,
-		vector<vector<double> >& pprob,
+        const vector<vector<double> >& fwd,
+        const vector<vector<double> >& bwd,
+        const hmmStates& st,
+        const double& Px,
+        vector<vector<double> >& pprob,
         vector<string>& pppath,
         vector<double>& ppprob,
-        ofstream &logfile
-		);
+        vector<int>& pswitch,
+        ofstream &logfile);
 
 void viterbi(
-		const vector<vector<int> >& sites,
-		const vector<int>& dvec,
-		const struct parameters& p,
-		const struct emissions& emit,
-		const class hmmStates& st,
-		const vector<int>& obs,
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const vector<int>& obs,
         // const vector<vector<double> >& pprob,
         const vector<double>& sprob,
-		vector<vector<double> >& vit,
-		vector<string>& vpath,
-		vector<double>& vprob );
+        vector<vector<double> >& vit,
+        vector<string>& vpath,
+        vector<double>& vprob );
+void viterbi2(
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const vector<int>& obs,
+        const vector<double>& sprob,
+        const vector<int>& pswitch,
+        vector<vector<double> >& vit,
+        vector<string>& vpath,
+        vector<double>& vprob );
 
 void max( const vector<double>& vec, double maxelement );
 

@@ -35,13 +35,14 @@ void generateStates(const class hapDef& hapInfo, class hmmStates& st ) {
     }
     // state concatenation:
     nrow = st.Xhap.size();
+    //cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates" << endl;
     for(int i=0; i < nrow; i++) {
         string tmp;
         tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]) + "-" + std::to_string(st.Gpop[i]) + "-" + std::to_string(st.Ghap[i]);
         //tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
         st.states.push_back( tmp );
-        // cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
-        //      st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
+        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
+        //     st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
     }
 }
 
@@ -56,11 +57,12 @@ void generateXstates(const class hapDef& hapInfo, class hmmStates& st ) {
     }
     // state concatenation:
     nrow = st.Xhap.size();
+    //cout << "i\tXhap\tXpop\tXindx\tstates" << endl;
     for(int i=0; i < nrow; i++) {
         string tmp;
         tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]);
         st.states.push_back( tmp );
-        // cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.states[i] << endl;
+        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.states[i] << endl;
     }
 }
 
@@ -154,15 +156,18 @@ void getsprob(
         const vector<int>& obs,
         vector<double>& sprob ) {
     double e;
-    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
-    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
+//    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
+//    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
+    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) );
+    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) );
+
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
             e = emit.match;
         } else {
             e = emit.mismatch;
         }
-        if( gMode != 1 && st.Ghap[i] == 0 ) {
+        if( st.Ghap[i] == 0 ) {
             sprob[i] =  sprob_G0 + e;
         } else {
             sprob[i] =  sprob_G1 + e;
@@ -250,49 +255,99 @@ void forward(
         const vector<int>& obs,
         const vector<double>& sprob,
         vector<vector<double> >& fwd ) {
-    // starting prob: 
-    fwd[0] = sprob;
     int d;
-    double lsum, tmp, trX, trG, e;
-    double negInf = - std::numeric_limits<double>::infinity();
-    double log_eps = log(numeric_limits<double>::epsilon());
-    // cout << numeric_limits<double>::epsilon() << endl;
+    double lsum, trX, trG, e;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
-    int cnt;
     vector<int> siteIndx;
-    if( gMode == 0 )
+    vector<double> tmp( st.states.size() );
+    if( gMode == 1 ) { // full model
         siteIndx = st.Gindx;
-    else
+    } else { // reduced
         siteIndx = st.Xindx;
+    }
+    // starting prob: 
+    fwd[0] = sprob;
     for(int j=1; j < sites.size() ; j++ ) {
         d = dvec[j] - dvec[j-1];
         for(int t=0; t < st.states.size(); t++) {
-            trX = lookupXtrans( t, 0, d, st, p, trXbin );
-            if( gMode == 0 ) {
-                trG = lookupGtrans( t, 0, d, st, p, trGbin );
-                lsum = fwd[j-1][0] + trX + trG;
-            } else
-                lsum = fwd[j-1][0] + trX;
-            for(int f=1; f < st.states.size(); f++) {
+            std::fill( tmp.begin(), tmp.end(), 0.0 );
+            for(int f=0; f < st.states.size(); f++) {
                 trX = lookupXtrans( t, f, d, st, p, trXbin );
-                if( gMode == 0 ) {
+                if( gMode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin );
-                    tmp = fwd[j-1][f] + trX + trG;
-                } else
-                    tmp = fwd[j-1][f] + trX;
-                //if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
-                if ((lsum - tmp) > log_eps)
-                    lsum = tmp + log( 1.0 + exp( lsum - tmp ) );
+                    tmp[f] = fwd[j-1][f] + trX + trG;
+                } else {
+                    tmp[f] = fwd[j-1][f] + trX;
+                }
+                //cout << "t= " << st.states[t] << " f= " << st.states[f] << " fwd[j-1][f]= " << fwd[j-1][f] << " trX= " << trX << endl;
             } // end 'from' loop
-            // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
                 e = emit.match;
             } else {
                 e = emit.mismatch;
             }
+            logSumExp( tmp, lsum );
             fwd[j][t] = e + lsum;
             // cout << t << endl;
+        } // end 'to' loop
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
+    } // end j site loop
+}
+
+void forward2(
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const class hmmStates& st2,
+        const vector<int>& obs,
+        const vector<double>& sprob,
+        const vector<int>& pswitch,
+        vector<vector<double> >& fwd ) {
+    // starting prob:
+    fwd[0] = sprob;
+    int d;
+    double lsum, trX, trG, e;
+    vector<double> trXbin(6,99);
+    vector<double> trGbin(10,99);
+    vector<int> siteIndx;
+    vector<double> tmp;
+    for(int j=1; j < sites.size() ; j++ ) {
+        // cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << fwd[j].size() << endl;
+        d = dvec[j] - dvec[j-1];
+        if( pswitch[j] == 0 ) { // choose sites to match for emission
+            siteIndx = st.Xindx;
+        } else {
+            if( ( pswitch[j-1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
+                // fill previous gene conversion states:
+                // cout << "transtion resize" << endl;
+                //fwd[j-1].resize( st2.states.size(), log_eps );
+                fwd[j-1].resize( st2.states.size(), -999.0 );
+            }
+            siteIndx = st2.Gindx;
+        }
+        for(int t=0; t < fwd[j].size(); t++) {
+            tmp.resize( fwd[j].size(), 0.0 );
+            std::fill( tmp.begin(), tmp.end(), 0.0 );
+            for(int f=0; f < fwd[j-1].size(); f++) {
+                trX = lookupXtrans( t, f, d, st2, p, trXbin );
+                if( pswitch[j] == 1 ) {
+                    trG = lookupGtrans( t, f, d, st2, p, trGbin );
+                    tmp[f] = fwd[j-1][f] + trX + trG;
+                } else {
+                    tmp[f] = fwd[j-1][f] + trX;
+                }
+            } // end 'from' loop
+            if( sites[j][ siteIndx[t] ] == obs[j] ) {
+                e = emit.match;
+            } else {
+                e = emit.mismatch;
+            }
+            logSumExp( tmp, lsum );
+            fwd[j][t] = e + lsum;
         } // end 'to' loop
         std::fill( trXbin.begin(), trXbin.end(), 99 );
         std::fill( trGbin.begin(), trGbin.end(), 99 );
@@ -306,55 +361,131 @@ void backward(
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
-        vector<vector<double> >& bwd ) {
-    double e, lsum, tmp, trX, trG;
+        const vector<double>& sprob,
+        vector<vector<double> >& bwd,
+        double& Pxb) {
+    double e, lsum, trX, trG;
+    // double negInf = - std::numeric_limits<double>::infinity();
+    // double log_eps = log(numeric_limits<double>::epsilon());
+    int d;
+    vector<double> trXbin(6,99);
+    vector<double> trGbin(10,99);
+    vector<int> siteIndx;
+    vector<double> tmp( st.states.size() );
+    if( gMode == 1 ) { // full model
+        siteIndx = st.Gindx;
+    } else { // reduced
+        siteIndx = st.Xindx;
+    }
+    for(int j = sites.size()-2; j >= 0 ; j-- ) {
+        d = dvec[j+1] - dvec[j];
+        for(int f=0; f < st.states.size(); f++ ) {
+            std::fill( tmp.begin(), tmp.end(), 0.0 );
+            for(int t=0; t < st.states.size(); t++ ) {
+                trX = lookupXtrans( t, f, d, st, p, trXbin);
+                //cout << "j= " << j << "\tf= " << f << "\tt= " << t;
+                if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
+                    e = emit.match;
+                } else {
+                    e = emit.mismatch;
+                }
+                if( gMode == 1 ) {
+                    trG = lookupGtrans( t, f, d, st, p, trGbin);
+                    //cout << "\ttrG= " << trG;
+                    tmp[t] = bwd[j+1][t] + trX + trG + e;
+                } else {
+                    tmp[t] = bwd[j+1][t] + trX + e;
+                    //cout << "\tbwd[j+1][t]= " << bwd[j+1][t] << "\ttrX= " << trX << "\te= " << e << "\ttmp[t]= " << tmp[t] ;
+                }
+                //cout << endl;
+            } // t loop
+            logSumExp( tmp, lsum );
+            //cout << "j= " << j << "\tf= " << f << "\tlsum= " << lsum << endl << endl;
+            bwd[j][f] = lsum;
+        } // f loop
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
+    } // j loop
+    // termination
+    std::fill( tmp.begin(), tmp.end(), 0.0 );
+    for(int f=0; f < st.states.size(); f++ ) {
+        tmp[f] = bwd[0][f] + sprob[f]; // e already included within sprob...
+    }
+    Pxb = 0.0;
+    for(int i=0; i<tmp.size(); i++ ) {
+        Pxb += exp( tmp[i] );
+    }
+    //logSumExp(tmp,Pxb);
+}
+
+void backward2(
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const class hmmStates& st2,
+        const vector<int>& obs,
+        const vector<double>& sprob,
+        const vector<int>& pswitch,
+        vector<vector<double> >& bwd,
+        double& Pxb ) {
+    double e, lsum, trX, trG;
     double negInf = - std::numeric_limits<double>::infinity();
     double log_eps = log(numeric_limits<double>::epsilon());
     int d;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
-    if( gMode == 0 )
-        siteIndx = st.Gindx;
-    else
-        siteIndx = st.Xindx;
+    vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
+        // cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << bwd[j].size() << endl;
         d = dvec[j+1] - dvec[j];
-        for(int f=0; f < st.states.size(); f++ ) {
-            trX = lookupXtrans( 0, f, d, st, p, trXbin);
-            // emission prob:
-            if( sites[j+1][ siteIndx[0] ] == obs[j+1] ) {
-                e = emit.match;
-            } else {
-                e = emit.mismatch;
+        if( pswitch[j] == 0 ) { // choose sites to match for emission
+            siteIndx = st.Xindx;
+        } else {
+            if( ( pswitch[j+1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
+                // fill previous gene conversion states:
+                // cout << "transtion resize" << endl;
+                //bwd[j+1].resize( st2.states.size(), log_eps );
+                bwd[j+1].resize( st2.states.size(), -999.0 );
             }
-            if( gMode == 0 ) {
-                trG = lookupGtrans( 0, f, d, st, p, trGbin);
-                lsum = bwd[j+1][0] + trX + trG + e ;
-            } else
-                lsum = bwd[j+1][0] + trX + e ;
-            for(int t=1; t < st.states.size(); t++ ) {
-                trX = lookupXtrans( t, f, d, st, p, trXbin);
+            siteIndx = st2.Gindx;
+        }
+        for(int f=0; f < bwd[j].size(); f++ ) {
+            tmp.resize( bwd[j].size(), 0.0 );
+            std::fill( tmp.begin(), tmp.end(), 0.0 );
+            for(int t=0; t < bwd[j].size(); t++ ) {
+                trX = lookupXtrans( t, f, d, st2, p, trXbin);
                 // emission prob:
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
                     e = emit.match;
                 } else {
                     e = emit.mismatch;
                 }
-                if( gMode == 0 ) {
-                    trG = lookupGtrans( t, f, d, st, p, trGbin);
-                    tmp = bwd[j+1][t] + trX + trG + e ;
-                } else
-                    tmp = bwd[j+1][t] + trX + e ;
-                //if( tmp > negInf ) lsum = tmp + log( 1 + exp( lsum - tmp ) );
-                if ((lsum - tmp) > log_eps)
-                    lsum = tmp + log( 1.0 + exp( lsum - tmp ) );
+                if( pswitch[j] == 1 ) {
+                    trG = lookupGtrans( t, f, d, st2, p, trGbin);
+                    tmp[t] = bwd[j+1][t] + trX + trG + e ;
+                } else {
+                    tmp[t] = bwd[j+1][t] + trX + e ;
+                }
             } // t loop
+            logSumExp( tmp, lsum );
             bwd[j][f] = lsum;
         } // f loop
         std::fill( trXbin.begin(), trXbin.end(), 99 );
         std::fill( trGbin.begin(), trGbin.end(), 99 );
     } // j loop
+    // termination:
+    std::fill( tmp.begin(), tmp.end(), 0.0 );
+    for(int f=0; f < st.states.size(); f++ ) {
+        tmp[f] = bwd[0][f] + sprob[f];
+    }
+    Pxb = 0.0;
+    for(int i=0; i<tmp.size(); i++ ) {
+        Pxb += exp( tmp[i] );
+    }
+    //logSumExp(tmp,Pxb);
 }
 
 void printMat( const vector<vector<double> >& mat ) {
@@ -375,62 +506,71 @@ void writeMat( const vector<vector<double> >& mat, ofstream &matfile ) {
     }
 }
 
+void writeTmat( const vector<vector<double> >& mat, ofstream &matfile ) {
+    for(int j=0; j < mat.size(); j++ ) {
+        for(int i=0; i < mat[j].size(); i++ ) {
+            matfile << setprecision(15) << mat[j][i] << " ";
+        }
+        matfile << endl;
+    }
+}
+
 void logSumExp( const vector<double>& vec, double& lse ) {
-    double max = - std::numeric_limits<double>::infinity();
-    lse = 0.0;
+    double max = - std::numeric_limits<double>::max();
     for(int i=0; i < vec.size(); i++ ) {
         if( vec[i] > max )
             max = vec[i];
     }
-    for(int i=0; i < vec.size(); i++ )
-        lse += exp( vec[i] - max );
-    lse = max + log( lse) ;
+    //cout << setprecision(64) << "max =" << max << endl;
+    double sum = 0.0;
+    vector<double> vec2(vec);
+    sort(vec2.begin(), vec2.end());
+    for(int i=0; i < vec2.size(); i++ ) {
+        sum += exp( vec2[i] - max );
+        //cout << i << " " << sum << endl;
+    }
+    lse = max + log(sum) ;
 }
 
 void postDecode(
         const vector<vector<double> >& fwd,
         const vector<vector<double> >& bwd,
-        const class hmmStates& st,
+        const hmmStates& st,
+        const double& Px,
         vector<vector<double> >& pprob,
         vector<string>& pppath,
         vector<double>& ppprob,
+        vector<int>& pswitch,
         ofstream &logfile
         ) {
-    double Pxa, tmp;
-    logSumExp( fwd[ fwd.size()-1 ], Pxa );
-    logfile << "Pxa= " << Pxa << endl;
-    double negInf = - std::numeric_limits<double>::infinity();
-    // backward:
-    double Pxb = bwd[0][0] + fwd[0][0];
-    for(int i=1; i < fwd[0].size(); i++ ) {
-        tmp = bwd[0][i] + fwd[0][i];
-        if( tmp > negInf ) 
-            Pxb = tmp + log( 1 + exp( Pxb - tmp ) );
+    if( fwd[ fwd.size()-1 ].size() != bwd[0].size() ) {
+        logfile << "Warning: forward[S] length (" << fwd[ fwd.size()-1 ].size() << ") and backward[0] length (" << bwd[0].size() << ") are not equal!" << endl;
     }
-    logfile << "Pxb= " << Pxb << endl;
+    double negInf = - std::numeric_limits<double>::infinity();
     // decoding:
-    for(int j=0; j < fwd.size(); j++ ) {
-        for(int i=0; i < fwd[0].size(); i++ ) {
-            pprob[j][i] = fwd[j][i] + bwd[j][i] - Pxa;
+    for(int j=0; j < pprob.size(); j++ ) {
+        // cout << "j= " << j << "\tfwd[j]= " << fwd[j].size() << "\tbwd[j]= " << bwd[j].size() << "\tpprob[j]= " << pprob[j].size() << "\tstLen= " << stLen << endl;
+        for(int i=0; i < pprob[j].size(); i++ ) {
+            pprob[j][i] = fwd[j][i] + bwd[j][i] - Px;
         }
     }
     // normalize:
     double cmax, csum;
-    for(int j=0; j < fwd.size(); j++ ) {
+    for(int j=0; j < pprob.size(); j++ ) {
         cmax = negInf;
         // determine max value:
-        for(int i=0; i < fwd[0].size(); i++ ) {
+        for(int i=0; i < pprob[j].size(); i++ ) {
             if( pprob[j][i] > cmax ) 
                 cmax = pprob[j][i];
         }
         // subtract max and determine sum:
         csum = 0.0;
-        for(int i=0; i < fwd[0].size(); i++ ) {
+        for(int i=0; i < pprob[j].size(); i++ ) {
             pprob[j][i] = pprob[j][i] - cmax;
             csum += exp( pprob[j][i] );
         }
         // divide by sum:
-        for(int i=0; i < fwd[0].size(); i++ ) {
+        for(int i=0; i < pprob[j].size(); i++ ) {
             pprob[j][i] = exp( pprob[j][i] ) / csum;
         }
     }
@@ -439,7 +579,7 @@ void postDecode(
     double pmax;
     for(int j=0; j < pprob.size(); j++ ) {
         pmax = negInf;
-        for(int i=0; i < pprob[0].size(); i++ ) {
+        for(int i=0; i < pprob[j].size(); i++ ) {
             if( pprob[j][i] > pmax ) {
                 pmax = pprob[j][i];
                 maxix = i;
@@ -447,6 +587,8 @@ void postDecode(
         }
         ppprob[j] = pprob[j][maxix];
         pppath[j] = st.states[maxix];
+        if( ( j > 0 ) && ( pppath[j] != pppath[j-1] ) )
+            pswitch[j] = 1;
     }
 }
 
@@ -457,7 +599,6 @@ void viterbi(
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
-        //const vector<vector<double> >& pprob,
         const vector<double>& sprob,
         vector<vector<double> >& vit,
         vector<string>& vpath,
@@ -471,7 +612,7 @@ void viterbi(
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
-    if( gMode == 0 )
+    if( gMode == 1 )
         siteIndx = st.Gindx;
     else 
         siteIndx = st.Xindx;
@@ -481,11 +622,109 @@ void viterbi(
             vmax = negInf;
             for(int f=0; f < st.states.size(); f++ ) {
                 trX = lookupXtrans( t, f, d, st, p, trXbin);
-                if( gMode == 0 ) {
+                if( gMode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
                 } else
                     tmp = vit[j-1][f] + trX;
+                if( tmp > vmax )
+                    vmax = tmp;
+            } // end from loop
+            // emission prob:
+            if( sites[j][ siteIndx[t] ] == obs[j] ) {
+                e = emit.match;
+            } else {
+                e = emit.mismatch;
+            }
+            vit[j][t] = e + vmax;
+        } // end to loop
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
+    } // end j loop
+    // termination:
+    int maxix = -1;
+    // find last max state:
+    vmax = negInf;
+    maxix = -1;
+    int j = sites.size()-1;
+    for(int i=0; i < vit[0].size(); i++ ) {
+        if( vit[j][i] > vmax ) {
+            vmax = vit[j][i];
+            maxix = i;
+        }
+    }
+    vpath[j] = st.states[maxix];
+    vprob[j] = vit[j][maxix];
+    // cout << vpath[j] << " " << vmax << " " << maxix << endl;
+    // traceback:
+    int t;
+    for(int j = sites.size()-2; j >= 0 ; j-- ) {
+        // find previous max state:
+        t = maxix;
+        vmax = negInf;
+        for(int f=0; f < st.states.size(); f++) {
+            trX = lookupXtrans( t, f, d, st, p, trXbin);
+            if( gMode == 1 ) {
+                trG = lookupGtrans( t, f, d, st, p, trGbin);
+                tmp = vit[j][f] + trX + trG;
+            } else
+                tmp = vit[j][f] + trX;
+            if( tmp > vmax ) {
+                vmax = tmp;
+                maxix = f;
+            }
+        }
+        vpath[j] = st.states[ maxix ];
+        vprob[j] = vit[j][maxix];
+        // cout << vpath[j] << " " << vmax << " " << maxix << endl;
+        std::fill( trXbin.begin(), trXbin.end(), 99 );
+        std::fill( trGbin.begin(), trGbin.end(), 99 );
+    }
+}
+
+void viterbi2(
+        const vector<vector<int> >& sites,
+        const vector<int>& dvec,
+        const struct parameters& p,
+        const struct emissions& emit,
+        const class hmmStates& st,
+        const vector<int>& obs,
+        const vector<double>& sprob,
+        const vector<int>& pswitch,
+        vector<vector<double> >& vit,
+        vector<string>& vpath,
+        vector<double>& vprob ) {
+    // starting prob, same as fwd:
+    vit[0] = sprob;
+    // recursion:
+    int d;
+    double trX, trG, vmax, tmp, e;
+    double negInf = - std::numeric_limits<double>::infinity();
+    double log_eps = log(numeric_limits<double>::epsilon());
+    vector<double> trXbin(6,99);
+    vector<double> trGbin(10,99);
+    vector<int> siteIndx;
+    for(int j=1; j < sites.size() ; j++ ) {
+        d = dvec[j] - dvec[j-1];
+        if( pswitch[j] == 0 ) { // choose sites to match for emission
+            siteIndx = st.Gindx;
+        } else {
+            if( ( pswitch[j-1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
+                // fill previous gene conversion states:
+                vit[j-1].resize( st.states.size(), log_eps );
+            }
+            siteIndx = st.Xindx;
+        }
+        for(int t=0; t < vit[j].size(); t++ ) {
+            vmax = negInf;
+            for(int f=0; f < vit[j].size(); f++ ) {
+                trX = lookupXtrans( t, f, d, st, p, trXbin);
+                if( pswitch[j] == 1 ) {
+                    trG = lookupGtrans( t, f, d, st, p, trGbin);
+                    tmp = vit[j-1][f] + trX + trG;
+                } else {
+                    tmp = vit[j-1][f] + trX;
+                }
                 if( tmp > vmax )
                     vmax = tmp;
             } // end from loop
@@ -521,13 +760,14 @@ void viterbi(
         // find previous max state:
         t = maxix;
         vmax = negInf;
-        for(int f=0; f < st.states.size(); f++) {
+        for(int f=0; f < vit[j].size(); f++) {
             trX = lookupXtrans( t, f, d, st, p, trXbin);
-            if( gMode == 0 ) {
+            if( pswitch[j] == 1 ) {
                 trG = lookupGtrans( t, f, d, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
-            } else
+            } else {
                 tmp = vit[j][f] + trX;
+            }
             if( tmp > vmax ) {
                 vmax = tmp;
                 maxix = f;

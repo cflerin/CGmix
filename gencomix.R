@@ -82,14 +82,14 @@ sampHap <- list()
 S <- length(hap[[1]])
 nbreaks <- 4
 #bp <- sort(sample(S-2,nbreaks)) +1
-#bp <- c(4,7,12) # 20
+bp <- c(4,7,12) # 20
 #bp <- c(69,117,193,947) # 1000
 #bp <- c(13,68,70,106) # 200
-bp <- c(9,12,14,21) # 200
+#bp <- c(9,12,14,21) # 200
 
 
-refH1mix <- 11 #5 # sample(1:length(refH1),1)
-refH2mix <- 15 #38 #5 # sample(1:length(refH2),1)
+refH1mix <- 5 # sample(1:length(refH1),1)
+refH2mix <- 5 # sample(1:length(refH2),1)
 
 m <- cbind(
     refH1[[refH1mix]] ,
