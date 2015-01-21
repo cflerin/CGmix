@@ -148,10 +148,12 @@ int main(int argc, char *argv[]) {
     for(int i=0; i<fwd[ fwd.size()-1 ].size(); i++ ) {
         Pxa += exp( fwd[ fwd.size()-1 ][i] );
     }
-    cout << setprecision(20) << "Pxa= " << Pxa << endl;
-    cout << setprecision(20) << "Pxb= " << Pxb << endl;
-    cout << "diff= " << Pxa - Pxb << endl;
+    Pxa = log( Pxa );
+    Pxb = log( Pxb );
     logfile << "finished" << endl;
+    logfile << setprecision(20) << "Pxa= " << Pxa << endl;
+    logfile << setprecision(20) << "Pxb= " << Pxb << endl;
+    logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
 
     logfile << "Starting posterior decoding..." << endl;
@@ -220,16 +222,19 @@ int main(int argc, char *argv[]) {
     }
 
     ////////////////
-//    std::fill( pswitch.begin(), pswitch.end(), 0 );
-//    for(int j=2; j < 3; j++) {
-//        pswitch[j] = 1;
-//    }
+    //std::fill( pswitch.begin(), pswitch.end(), 0 );
+    //for(int j=2; j < 3; j++) {
+    //    pswitch[j] = 1;
+    //}
+    // for(int j=0; j<pswitch.size(); j++ ) {
+    //     cout << pswitch[j] << endl;
+    // }
     ////////////////
 
     // restart hmm:
     if( gMode == 2 ) {
         logfile << "Restart hmm" << endl;
-        //param.theta = 1.0/1000;
+        param.theta = 1.0/1000;
         hmmStates st2;
         generateStates( hapInfo, st2 );
 
@@ -281,7 +286,7 @@ int main(int argc, char *argv[]) {
         writeTmat( fwd, matfile );
 
 
-        double Pxa, Pxb;
+        //double Pxa, Pxb;
         backward2( sites, locs, param, emit, st, st2, obs, sprob, pswitch, bwd, Pxb );
         matfile << "backward" << endl;
         writeTmat( bwd, matfile );
@@ -290,13 +295,16 @@ int main(int argc, char *argv[]) {
         for(int i=0; i<fwd[ fwd.size()-1 ].size(); i++ ) {
             Pxa += exp( fwd[ fwd.size()-1 ][i] );
         }
-        cout << setprecision(20) << "Pxa= " << Pxa << endl;
-        cout << setprecision(20) << "Pxb= " << Pxb << endl;
-        cout << "diff= " << Pxa - Pxb << endl;
+        Pxa = log( Pxa );
+        Pxb = log( Pxb );
+        logfile << setprecision(20) << "Pxa= " << Pxa << endl;
+        logfile << setprecision(20) << "Pxb= " << Pxb << endl;
+        logfile << "diff= " << Pxa - Pxb << endl;
 
         vector<string> pppath2( sites.size() );
         vector<double> ppprob2( sites.size() , 0.0);
-        postDecode( fwd, bwd, st2, Pxa, pprob, pppath2, ppprob2, pswitch, logfile);
+        vector<int> pswitch2 = pswitch;
+        postDecode( fwd, bwd, st2, Pxa, pprob, pppath2, ppprob2, pswitch2, logfile);
         matfile << "posterior" << endl;
         writeTmat( pprob, matfile );
 

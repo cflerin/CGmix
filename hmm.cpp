@@ -156,10 +156,10 @@ void getsprob(
         const vector<int>& obs,
         vector<double>& sprob ) {
     double e;
-//    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
-//    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
-    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) );
-    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) );
+    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
+    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
+//    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) );
+//    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) );
 
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
@@ -315,29 +315,34 @@ void forward2(
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
     vector<double> tmp;
+    //cout << "pswitch"<<pswitch.size() << endl;
     for(int j=1; j < sites.size() ; j++ ) {
-        // cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << fwd[j].size() << endl;
+        //cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << fwd[j].size() << endl;
         d = dvec[j] - dvec[j-1];
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
-            if( ( pswitch[j-1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
-                // fill previous gene conversion states:
-                // cout << "transtion resize" << endl;
-                //fwd[j-1].resize( st2.states.size(), log_eps );
-                fwd[j-1].resize( st2.states.size(), -999.0 );
-            }
+            //if( ( pswitch[j-1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
+            //    // fill previous gene conversion states:
+            //    // cout << "transtion resize" << endl;
+            //    //fwd[j-1].resize( st2.states.size(), log_eps );
+            //    // fwd[j-1].resize( st2.states.size(), -999.0 );
+            //}
             siteIndx = st2.Gindx;
         }
+        //cout << "fwd[j].size() = " << fwd[j].size() << endl;
         for(int t=0; t < fwd[j].size(); t++) {
-            tmp.resize( fwd[j].size(), 0.0 );
+            tmp.resize( fwd[j-1].size(), 0.0 );
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int f=0; f < fwd[j-1].size(); f++) {
+                //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
                 trX = lookupXtrans( t, f, d, st2, p, trXbin );
-                if( pswitch[j] == 1 ) {
+                if( ( pswitch[j] == 1 ) || ( pswitch[j-1] == 1 ) ) {
+                    //cout << "\ttrx + trG" << endl;
                     trG = lookupGtrans( t, f, d, st2, p, trGbin );
                     tmp[f] = fwd[j-1][f] + trX + trG;
                 } else {
+                    //cout << "\ttrx" << endl;
                     tmp[f] = fwd[j-1][f] + trX;
                 }
             } // end 'from' loop
@@ -407,8 +412,9 @@ void backward(
         std::fill( trGbin.begin(), trGbin.end(), 99 );
     } // j loop
     // termination
+    tmp.resize( bwd[0].size(), 0.0 );
     std::fill( tmp.begin(), tmp.end(), 0.0 );
-    for(int f=0; f < st.states.size(); f++ ) {
+    for(int f=0; f < bwd[0].size(); f++ ) {
         tmp[f] = bwd[0][f] + sprob[f]; // e already included within sprob...
     }
     Pxb = 0.0;
@@ -439,34 +445,36 @@ void backward2(
     vector<int> siteIndx;
     vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
-        // cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << bwd[j].size() << endl;
+        //cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << bwd[j].size() << endl;
         d = dvec[j+1] - dvec[j];
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
-            if( ( pswitch[j+1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
-                // fill previous gene conversion states:
-                // cout << "transtion resize" << endl;
-                //bwd[j+1].resize( st2.states.size(), log_eps );
-                bwd[j+1].resize( st2.states.size(), -999.0 );
-            }
+            //if( ( pswitch[j+1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
+            //    // fill previous gene conversion states:
+            //    // cout << "transtion resize" << endl;
+            //    //bwd[j+1].resize( st2.states.size(), log_eps );
+            //    //bwd[j+1].resize( st2.states.size(), -999.0 );
+            //}
             siteIndx = st2.Gindx;
         }
         for(int f=0; f < bwd[j].size(); f++ ) {
-            tmp.resize( bwd[j].size(), 0.0 );
+            tmp.resize( bwd[j+1].size(), 0.0 );
             std::fill( tmp.begin(), tmp.end(), 0.0 );
-            for(int t=0; t < bwd[j].size(); t++ ) {
+            for(int t=0; t < bwd[j+1].size(); t++ ) {
+                //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
                 trX = lookupXtrans( t, f, d, st2, p, trXbin);
-                // emission prob:
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
                     e = emit.match;
                 } else {
                     e = emit.mismatch;
                 }
-                if( pswitch[j] == 1 ) {
+                if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
+                    //cout << "\ttrx + trG" << endl;
                     trG = lookupGtrans( t, f, d, st2, p, trGbin);
                     tmp[t] = bwd[j+1][t] + trX + trG + e ;
                 } else {
+                    //cout << "\ttrx" << endl;
                     tmp[t] = bwd[j+1][t] + trX + e ;
                 }
             } // t loop
@@ -477,8 +485,9 @@ void backward2(
         std::fill( trGbin.begin(), trGbin.end(), 99 );
     } // j loop
     // termination:
+    tmp.resize( bwd[0].size(), 0.0 );
     std::fill( tmp.begin(), tmp.end(), 0.0 );
-    for(int f=0; f < st.states.size(); f++ ) {
+    for(int f=0; f < bwd[0].size(); f++ ) {
         tmp[f] = bwd[0][f] + sprob[f];
     }
     Pxb = 0.0;
@@ -603,7 +612,7 @@ void viterbi(
         vector<vector<double> >& vit,
         vector<string>& vpath,
         vector<double>& vprob ) {
-    // starting prob, same as fwd:
+    // starting prob:
     vit[0] = sprob;
     // recursion:
     int d;
@@ -612,10 +621,11 @@ void viterbi(
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
-    if( gMode == 1 )
+    if( gMode == 1 ) {
         siteIndx = st.Gindx;
-    else 
+    } else {
         siteIndx = st.Xindx;
+    }
     for(int j=1; j < sites.size() ; j++ ) {
         d = dvec[j] - dvec[j-1];
         for(int t=0; t < st.states.size(); t++ ) {
@@ -625,8 +635,9 @@ void viterbi(
                 if( gMode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
-                } else
+                } else {
                     tmp = vit[j-1][f] + trX;
+                }
                 if( tmp > vmax )
                     vmax = tmp;
             } // end from loop
@@ -667,8 +678,9 @@ void viterbi(
             if( gMode == 1 ) {
                 trG = lookupGtrans( t, f, d, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
-            } else
+            } else {
                 tmp = vit[j][f] + trX;
+            }
             if( tmp > vmax ) {
                 vmax = tmp;
                 maxix = f;
@@ -709,17 +721,13 @@ void viterbi2(
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Gindx;
         } else {
-            if( ( pswitch[j-1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
-                // fill previous gene conversion states:
-                vit[j-1].resize( st.states.size(), log_eps );
-            }
             siteIndx = st.Xindx;
         }
         for(int t=0; t < vit[j].size(); t++ ) {
             vmax = negInf;
-            for(int f=0; f < vit[j].size(); f++ ) {
+            for(int f=0; f < vit[j-1].size(); f++ ) {
                 trX = lookupXtrans( t, f, d, st, p, trXbin);
-                if( pswitch[j] == 1 ) {
+                if( ( pswitch[j] == 1 ) | ( pswitch[j-1] == 1 ) ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
                 } else {
