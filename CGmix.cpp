@@ -18,6 +18,7 @@ using namespace std;
 int gMode;
 
 int main(int argc, char *argv[]) {
+    std::streamsize ss = std::cout.precision();
     if( argc < 3 ) {
         std::cerr << "Usage: " << argv[0] << " [file prefix, with *.sites, *.locs *.hapnames endings] [0: limit to crossover analysis; 1: full model; 2: Two-pass model]" << std::endl;
         return 1;
@@ -79,16 +80,15 @@ int main(int argc, char *argv[]) {
     param.S = locs.size() ;
     param.T = 7;
     param.u1 = 0.5;
-    param.rho = 1.0/1000000;
-    param.gam = 1.0/100000;
-    //param.gam = 1.0/10000;
+    param.rho = 1.0/100000;
+    param.gam = 1.0/10000;
     param.lam = 1.0/500;
     param.theta = 1.0/1000;
 
     hmmStates st;
     if( ( gMode == 0 ) || ( gMode == 2 ) ) {
         generateXstates( hapInfo, st );
-        param.theta = 1.0/100000;
+        param.theta = numeric_limits<double>::epsilon(); //1.0/100000;
     } else if( gMode == 1 ) {
         generateStates( hapInfo, st );
     }
@@ -134,7 +134,6 @@ int main(int argc, char *argv[]) {
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, locs, param, emit, st, obs, sprob, fwd );
-    logfile << "finished" << endl;
     // printMat( fwd );
 
     double Pxa, Pxb;
@@ -150,7 +149,6 @@ int main(int argc, char *argv[]) {
     }
     Pxa = log( Pxa );
     Pxb = log( Pxb );
-    logfile << "finished" << endl;
     logfile << setprecision(20) << "Pxa= " << Pxa << endl;
     logfile << setprecision(20) << "Pxb= " << Pxb << endl;
     logfile << "diff= " << Pxa - Pxb << endl;
@@ -162,7 +160,6 @@ int main(int argc, char *argv[]) {
     vector<double> ppprob( sites.size() , 0.0);
     vector<int> pswitch( sites.size(), 0 );
     postDecode( fwd, bwd, st, Pxa, pprob, pppath, ppprob, pswitch, logfile);
-    logfile << "finished" << endl;
     // printMat( pprob );
     // writeMat( pprob, matfile );
 
@@ -172,7 +169,6 @@ int main(int argc, char *argv[]) {
     vector<double> vprob( sites.size() , 0.0);
     viterbi( sites, locs, param, emit, st, obs, sprob, vit, vpath, vprob );
     // printMat( vit );
-    logfile << "finished" << endl;
 
     if( ( gMode == 0 ) || ( gMode == 2 ) ) {
         // find haplotype switches:
@@ -181,11 +177,15 @@ int main(int argc, char *argv[]) {
             if( pswitch[j] == 1 )
                 swIx.push_back( j );
         }
+        //for(int j=0; j<pswitch.size(); j++)
+        //    cout << pswitch[j] << " ";
+        //cout << endl;
+        int width = 10; 
         // expand marks around switches:
         vector<int> repl(2);
         for(int j=0; j < swIx.size(); j++) {
-            repl[0] = swIx[j] - 5;
-            repl[1] = swIx[j] + 5;
+            repl[0] = swIx[j] - width;
+            repl[1] = swIx[j] + width;
             if( repl[0] < 0 )
                 repl[0] = 0;
             if( repl[1] > (param.S-1) )
@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
         // output Viterbi path and probabilites:
         vector<double> gcprob( sites.size(), 0.0 );
         double csum;
-        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCProb" << endl;
+        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCprob" << endl;
         for(int j=0; j < pprob.size(); j++ ) {
             csum =0.0;
             if( gMode == 1 ) {
@@ -233,12 +233,23 @@ int main(int argc, char *argv[]) {
 
     // restart hmm:
     if( gMode == 2 ) {
+        logfile.precision (ss);
         logfile << "Restart hmm" << endl;
         param.theta = 1.0/1000;
         hmmStates st2;
         generateStates( hapInfo, st2 );
+        logfile << "Generated " << st2.states.size() << " states" << endl;
+        logfile << "Parameters set:" << endl;
+        logfile << "n1 = " << param.n1 << endl;
+        logfile << "n2 = " << param.n2 << endl;
+        logfile << "nSites = " << param.S << endl;
+        logfile << "u1 = " << param.u1 << endl;
+        logfile << "rho = " << param.rho << endl;
+        logfile << "gamma = " << param.gam << endl;
+        logfile << "lambda = " << param.lam << endl;
+        logfile << "theta = " << param.theta << endl;
 
-        logfile << "new emissions" << endl;
+        //logfile << "new emissions" << endl;
         // emissions probabilities:
         emissions emit;
         emit.match = (2.0 * (param.n1 + param.n2) + param.theta ) / ( 2.0 * ( (param.n1 + param.n2) + param.theta) );
@@ -246,7 +257,7 @@ int main(int argc, char *argv[]) {
         emit.match = log( emit.match );
         emit.mismatch = log( emit.mismatch );
 
-        logfile << "new sprob" << endl;
+        //logfile << "new sprob" << endl;
         if( pswitch[0] == 1 ) {
             sprob.resize( st2.states.size(), 0.0 );
             std::fill( sprob.begin(), sprob.end(), 0.0 );
@@ -279,14 +290,14 @@ int main(int argc, char *argv[]) {
             }
             // cout << "j = " << j << "\t" << fwd[j].size() << endl;
         }
-        logfile << "finished" << endl;
 
+        logfile << "Starting forward algorithm..." << endl;;
         forward2( sites, locs, param, emit, st, st2, obs, sprob, pswitch, fwd );
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
 
 
-        //double Pxa, Pxb;
+        logfile << "Starting backward algorithm..." << endl;
         backward2( sites, locs, param, emit, st, st2, obs, sprob, pswitch, bwd, Pxb );
         matfile << "backward" << endl;
         writeTmat( bwd, matfile );
@@ -301,6 +312,7 @@ int main(int argc, char *argv[]) {
         logfile << setprecision(20) << "Pxb= " << Pxb << endl;
         logfile << "diff= " << Pxa - Pxb << endl;
 
+        logfile << "Starting posterior decoding..." << endl;
         vector<string> pppath2( sites.size() );
         vector<double> ppprob2( sites.size() , 0.0);
         vector<int> pswitch2 = pswitch;
@@ -308,6 +320,7 @@ int main(int argc, char *argv[]) {
         matfile << "posterior" << endl;
         writeTmat( pprob, matfile );
 
+        logfile << "Starting Viterbi algorithm..." << endl;
         vector<string> vpath2( sites.size() );
         vector<double> vprob2( sites.size() , 0.0);
         viterbi2( sites, locs, param, emit, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
@@ -315,7 +328,7 @@ int main(int argc, char *argv[]) {
         // output Viterbi path and probabilites:
         vector<double> gcprob2( sites.size(), 0.0 );
         double csum;
-        pathfile << "site\tppos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tVpath2\tVpathProb2\tPpath2\tPpathProb2\tGCprob" << endl;
+        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tVpath2\tVpathProb2\tPpath2\tPpathProb2\tGCprob" << endl;
         for(int j=0; j < pprob.size(); j++ ) {
             csum =0.0;
             for(int i=0; i < pprob[j].size(); i++ ) {
@@ -329,6 +342,7 @@ int main(int argc, char *argv[]) {
         }
     } // end of 2nd pass
 
+    logfile << "Done!" << endl;
     logfile.close();
     pathfile.close();
     matfile.close();
