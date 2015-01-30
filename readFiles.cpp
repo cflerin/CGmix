@@ -135,4 +135,57 @@ void readLocs(const string &fname, vector<int> &locs ) {
         cout << "Failed to open loc file: " << fname << endl;
 }
 
+void readGenMap(const string &fname, geneticMap &gMap ) {
+    unsigned int gzMAX_LINE_LEN = 1024*1024;
+    char *gz_readbuffer = new char[gzMAX_LINE_LEN];
+    gzFile gzfile_in = gzopen(fname.c_str(), "rb");
+    unsigned int lineCnt = 0;
+    while( ! gzeof(gzfile_in) ) {
+        // read 1 line:
+        bool again = true;
+        char * tmp;
+        string out = "";
+        while (again == true) {
+            tmp = gzgets(gzfile_in, gz_readbuffer, gzMAX_LINE_LEN);
+            if (tmp == NULL)
+                return;
+            out.append(gz_readbuffer);
+            if ((strlen(gz_readbuffer) != gzMAX_LINE_LEN-1) || (gz_readbuffer[gzMAX_LINE_LEN-2] == '\n'))
+                again = false;
+        }
+        out.erase( out.find_last_not_of(" \t\n\r") + 1); // Trim whitespace at end of line (required in gzipped case!)
+        // end 1 line
+        if( lineCnt == 0 ) { // skip header line
+            lineCnt++;
+            continue;
+        }
+        // fill genMap values:
+        string field;
+        stringstream ss(out);
+        unsigned int tmpInt;
+        double tmpDbl;
+        unsigned int fieldCnt = 0;
+        while( std::getline( ss, field, '\t' ) ) {
+            if( fieldCnt == 0 ) { 
+                gMap.chr.push_back( field ); 
+            }
+            if( fieldCnt == 1 ) { 
+                istringstream( field ) >> tmpInt;
+                gMap.pos.push_back( tmpInt );
+            }
+            if( fieldCnt == 2 ) { 
+                istringstream( field ) >> tmpDbl;
+                gMap.rate.push_back( tmpDbl ); 
+            }
+            if( fieldCnt == 3 ) { 
+                istringstream( field ) >> tmpDbl;
+                gMap.cM.push_back( tmpDbl ); 
+            }
+            fieldCnt++;
+        }
+        // cout << gMap.chr[ gMap.chr.size()-1 ] << "\t" << gMap.pos[ gMap.pos.size()-1 ] << "\t" << gMap.rate[ gMap.rate.size()-1 ] << "\t" << gMap.cM[ gMap.cM.size()-1 ] << endl;
+        lineCnt++;
+    }
+    gzclose( gzfile_in );
+}
 

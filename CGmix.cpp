@@ -67,6 +67,14 @@ int main(int argc, char *argv[]) {
     }
     logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
 
+    string gmfile = "/home/ccampbell/resources/genetic_map_HapMapII_GRCh37/genetic_map_GRCh37_chr22.txt.gz";
+    geneticMap gMap;
+    readGenMap( gmfile, gMap );
+    logfile << "Read " << gMap.chr.size() << " lines from genetic map" << endl;
+
+    //interpolate values from locs:
+
+
     // set/get parameters:
     parameters param;
     param.n1 = 0;
@@ -195,24 +203,26 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    vector<double> gcprob( sites.size(), 0.0 );
+    vector<double> gcprobPop1( sites.size(), 0.0 );
+    vector<double> gcprobPop2( sites.size(), 0.0 );
     if( ( gMode == 0 ) || ( gMode == 1 ) ) {
         // output Viterbi path and probabilites:
-        vector<double> gcprob( sites.size(), 0.0 );
         double csum;
-        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCprob" << endl;
+        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCprob\tGCprobP1\tGCprobP2" << endl;
         for(int j=0; j < pprob.size(); j++ ) {
-            csum =0.0;
-            if( gMode == 1 ) {
-                for(int i=0; i < st.states.size(); i++ ) {
-                    if( st.Ghap[i] == 0 )
-                        continue;
-                    csum += pprob[j][i];
+            for(int i=0; i < pprob[j].size(); i++ ) {
+                if( st.Ghap[i] != 0 ) { // gene conversion state
+                    gcprob[j] += pprob[j][i];
+                    if( st.Gpop[i] == 1 ) {
+                        gcprobPop1[j] += pprob[j][i];
+                    } else if( st.Gpop[i] == 2 ) {
+                        gcprobPop2[j] += pprob[j][i];
+                    }
                 }
             }
-            gcprob[j] = 1.0 - csum;
-            pathfile << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << 1-gcprob[j] << endl;
+            pathfile << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
         }
-
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
         matfile << "backward" << endl;
@@ -326,19 +336,26 @@ int main(int argc, char *argv[]) {
         viterbi2( sites, locs, param, emit, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
 
         // output Viterbi path and probabilites:
-        vector<double> gcprob2( sites.size(), 0.0 );
-        double csum;
-        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tVpath2\tVpathProb2\tPpath2\tPpathProb2\tGCprob" << endl;
+        gcprob.resize( sites.size(), 0.0 );
+        std::fill( gcprob.begin(), gcprob.end(), 0.0 );
+        gcprobPop1.resize( sites.size(), 0.0 );
+        std::fill( gcprobPop1.begin(), gcprobPop1.end(), 0.0 );
+        gcprobPop2.resize( sites.size(), 0.0 );
+        std::fill( gcprobPop2.begin(), gcprobPop2.end(), 0.0 );
+        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tVpath2\tVpathProb2\tPpath2\tPpathProb2\tGCprob\tGCprobP1\tGCprobP2" << endl;
         for(int j=0; j < pprob.size(); j++ ) {
-            csum =0.0;
             for(int i=0; i < pprob[j].size(); i++ ) {
-                if( st2.Ghap[i] == 0 )
-                    continue;
-                csum += pprob[j][i];
+                if( st2.Ghap[i] != 0 ) { // gene conversion state
+                    gcprob[j] += pprob[j][i];
+                    if( st2.Gpop[i] == 1 ) {
+                        gcprobPop1[j] += pprob[j][i];
+                    } else if( st2.Gpop[i] == 2 ) {
+                        gcprobPop2[j] += pprob[j][i];
+                    }
+                }
             }
-            gcprob2[j] = 1.0 - csum;
             pathfile << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t";
-            pathfile << vpath2[j] << "\t" << exp(vprob2[j]) << "\t" << pppath2[j] << "\t" << ppprob2[j] << "\t" << 1-gcprob2[j] << endl;
+            pathfile << vpath2[j] << "\t" << exp(vprob2[j]) << "\t" << pppath2[j] << "\t" << ppprob2[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
         }
     } // end of 2nd pass
 
@@ -346,7 +363,6 @@ int main(int argc, char *argv[]) {
     logfile.close();
     pathfile.close();
     matfile.close();
-
 }
 
 
