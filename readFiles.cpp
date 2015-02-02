@@ -189,3 +189,36 @@ void readGenMap(const string &fname, geneticMap &gMap ) {
     gzclose( gzfile_in );
 }
 
+void interpGenMap(const geneticMap &gMap, const vector<int> &locs, positions &pos ) {
+    pos.pos.resize( locs.size() );
+    pos.cM.resize( locs.size() );
+    unsigned int jstart = 0;
+    unsigned int x;
+    int tmp;
+    vector<int> flank(2), flankix(2);
+    for(int i=0; i < locs.size(); i++ ) {
+        x = locs[i];
+        flank[0] =   std::numeric_limits<int>::max();
+        flank[1] = - std::numeric_limits<int>::max();
+        std::fill( flankix.begin(), flankix.end(), 0 );
+        for(int j=jstart; j < gMap.pos.size(); j++ ) {
+            tmp = x - gMap.pos[j];
+            if( ( tmp>0 ) && ( tmp < flank[0] ) ) {
+                flank[0] = gMap.pos[j];
+                flankix[0] = j;
+                continue;
+            }
+            if( ( tmp<0 ) && ( tmp > flank[1] ) ) {
+                flank[1] = gMap.pos[j];
+                flankix[1] = j;
+                if(j>5) jstart = j - 5;
+                break;
+            }
+        }
+        pos.pos[i] = locs[i];
+        pos.cM[i] =
+            gMap.cM[ flankix[0] ] + ( gMap.cM[ flankix[1] ] - gMap.cM[ flankix[0] ] ) * ( x - flank[0] ) / ( flank[1] - flank[0] );
+        //cout << pos.pos[i] << "\t" << pos.cM[i] << endl;
+    }
+}
+

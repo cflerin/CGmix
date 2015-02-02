@@ -11,6 +11,7 @@
 #include <zlib.h>
 //#include <stdio.h>
 #include <cstring>
+#include <limits>
 
 using namespace std;
 
@@ -31,6 +32,14 @@ class geneticMap
         vector<int> pos;
         vector<double> rate, cM;
 };
+class positions 
+{
+    public:
+        positions(){};
+        ~positions(){};
+        vector<int> pos;
+        vector<double> cM;
+};
 
 void readSites(const string &sitefname, vector<vector<int> > &sites );
 void readLocs(const string &locfname, vector<int> &locs );
@@ -42,6 +51,7 @@ void print2DvecString(const vector<vector<string> >& vec);
 void print1DvecString(const vector<string>& vec);
 
 void readGenMap(const string &fname, geneticMap &gMap );
+void interpGenMap(const geneticMap &gMap, const vector<int> &locs, positions &pos );
 
 #endif
 

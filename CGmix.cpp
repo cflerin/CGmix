@@ -73,7 +73,10 @@ int main(int argc, char *argv[]) {
     logfile << "Read " << gMap.chr.size() << " lines from genetic map" << endl;
 
     //interpolate values from locs:
+    positions pos;
+    interpGenMap( gMap, locs, pos );
 
+/*
 
     // set/get parameters:
     parameters param;
@@ -363,6 +366,7 @@ int main(int argc, char *argv[]) {
     logfile.close();
     pathfile.close();
     matfile.close();
+*/
 }
 
 
