@@ -54,6 +54,7 @@ void generateXstates(const class hapDef& hapInfo, class hmmStates& st ) {
         st.Xhap.push_back( hapInfo.hN[j] );
         st.Xpop.push_back( hapInfo.hP[j] );
         st.Xindx.push_back( j );
+        st.Ghap.push_back( 0 ); // fill this vector with null GC states
     }
     // state concatenation:
     nrow = st.Xhap.size();
@@ -63,6 +64,7 @@ void generateXstates(const class hapDef& hapInfo, class hmmStates& st ) {
         tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]);
         st.states.push_back( tmp );
         //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.states[i] << endl;
+        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.Ghap[i] << st.states[i] << endl;
     }
 }
 
@@ -261,7 +263,7 @@ void forward(
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
     vector<double> tmp( st.states.size() );
-    if( gMode == 1 ) { // full model
+    if( p.mode == 1 ) { // full model
         siteIndx = st.Gindx;
     } else { // reduced
         siteIndx = st.Xindx;
@@ -274,7 +276,7 @@ void forward(
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int f=0; f < st.states.size(); f++) {
                 trX = lookupXtrans( t, f, d, st, p, trXbin );
-                if( gMode == 1 ) {
+                if( p.mode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin );
                     tmp[f] = fwd[j-1][f] + trX + trG;
                 } else {
@@ -322,12 +324,6 @@ void forward2(
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
-            //if( ( pswitch[j-1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
-            //    // fill previous gene conversion states:
-            //    // cout << "transtion resize" << endl;
-            //    //fwd[j-1].resize( st2.states.size(), log_eps );
-            //    // fwd[j-1].resize( st2.states.size(), -999.0 );
-            //}
             siteIndx = st2.Gindx;
         }
         //cout << "fwd[j].size() = " << fwd[j].size() << endl;
@@ -377,7 +373,7 @@ void backward(
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
     vector<double> tmp( st.states.size() );
-    if( gMode == 1 ) { // full model
+    if( p.mode == 1 ) { // full model
         siteIndx = st.Gindx;
     } else { // reduced
         siteIndx = st.Xindx;
@@ -394,7 +390,7 @@ void backward(
                 } else {
                     e = emit.mismatch;
                 }
-                if( gMode == 1 ) {
+                if( p.mode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
                     //cout << "\ttrG= " << trG;
                     tmp[t] = bwd[j+1][t] + trX + trG + e;
@@ -450,12 +446,6 @@ void backward2(
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
-            //if( ( pswitch[j+1] == 0 ) && ( pswitch[j] == 1 ) ) { // transition to full model
-            //    // fill previous gene conversion states:
-            //    // cout << "transtion resize" << endl;
-            //    //bwd[j+1].resize( st2.states.size(), log_eps );
-            //    //bwd[j+1].resize( st2.states.size(), -999.0 );
-            //}
             siteIndx = st2.Gindx;
         }
         for(int f=0; f < bwd[j].size(); f++ ) {
@@ -621,7 +611,7 @@ void viterbi(
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
-    if( gMode == 1 ) {
+    if( p.mode == 1 ) {
         siteIndx = st.Gindx;
     } else {
         siteIndx = st.Xindx;
@@ -632,7 +622,7 @@ void viterbi(
             vmax = negInf;
             for(int f=0; f < st.states.size(); f++ ) {
                 trX = lookupXtrans( t, f, d, st, p, trXbin);
-                if( gMode == 1 ) {
+                if( p.mode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
                 } else {
@@ -675,7 +665,7 @@ void viterbi(
         vmax = negInf;
         for(int f=0; f < st.states.size(); f++) {
             trX = lookupXtrans( t, f, d, st, p, trXbin);
-            if( gMode == 1 ) {
+            if( p.mode == 1 ) {
                 trG = lookupGtrans( t, f, d, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
             } else {

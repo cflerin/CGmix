@@ -15,24 +15,13 @@
 #include <iomanip>
 #include <cmath>
 #include <limits>
-#include <string>
 // #include <sstream>
 
 #include "readFiles.h"
+#include "parameters.h"
 
 using namespace std;
 
-extern int gMode;
-
-struct parameters {
-    int n1, n2, S;
-    double T, 
-           u1,
-           rho,
-           gam,
-           lam,
-           theta;
-};
 struct emissions {
     double match, mismatch;
 };
@@ -48,31 +37,31 @@ class hmmStates
 void generateStates(const class hapDef& hapInfo, class hmmStates& st );
 void generateXstates(const class hapDef& hapInfo, class hmmStates& st );
 
-void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX );
-void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG );
+void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const parameters& p, double& trX );
+void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const parameters& p, double& trG );
 
 void getsprob( 
         const vector<int>& sites0, 
-        const struct parameters& p, 
+        const parameters& p, 
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         vector<double>& sprob );
 void getsprobX( 
         const vector<int>& sites0, 
-        const struct parameters& p, 
+        const parameters& p, 
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         vector<double>& sprob );
 
-double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, vector<double>& trXbin );
-double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, vector<double>& trGbin );
+double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const parameters& p, vector<double>& trXbin );
+double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const parameters& p, vector<double>& trGbin );
 
 void forward( 
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& p,
+        const parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
@@ -81,7 +70,7 @@ void forward(
 void forward2( 
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& p,
+        const parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const class hmmStates& st2,
@@ -93,7 +82,7 @@ void forward2(
 void backward(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& p,
+        const parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
@@ -103,7 +92,7 @@ void backward(
 void backward2(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& p,
+        const parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const class hmmStates& st2,
@@ -131,7 +120,7 @@ void postDecode(
 void viterbi(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& p,
+        const parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
@@ -143,7 +132,7 @@ void viterbi(
 void viterbi2(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
-        const struct parameters& p,
+        const parameters& p,
         const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,

@@ -1,58 +1,43 @@
-#include <cstdlib>
-#include <cstdio>
-#include <vector>
-#include <string>
-#include <string.h>
-#include <iostream>
-#include <fstream> // read files
-#include <sstream>
-#include <iomanip> // setprecision
-#include <cmath>   // log
-#include <algorithm>
+/*
+ * CGmix.cpp
+ *
+ *  Created on: Nov 7, 2014
+ *      Author: ccampbell
+ */
 
-#include "readFiles.h"
-#include "hmm.h"
-
-using namespace std;
-
-int gMode;
+#include "CGmix.h"
 
 int main(int argc, char *argv[]) {
     std::streamsize ss = std::cout.precision();
-    if( argc < 3 ) {
-        std::cerr << "Usage: " << argv[0] << " [file prefix, with *.sites, *.locs *.hapnames endings] [0: limit to crossover analysis; 1: full model; 2: Two-pass model]" << std::endl;
-        return 1;
-    }
-    if( strcmp( argv[2] , "1" ) == 0 ) // run full model
-        gMode = 1; //atoi( argv[2] );
-    else if( strcmp( argv[2] , "0" ) == 0 ) // run in haplotype-only mode
-        gMode = 0;
-    else if( strcmp( argv[2] , "2" ) == 0 ) // run first pass, then second
-        gMode = 2;
-    //
-    string fname = argv[1];
-    string logf = fname + ".log" + std::to_string(gMode);
-    ofstream logfile ( logf.c_str() );
-    string pathf = fname + ".path" + std::to_string(gMode);
-    ofstream pathfile ( pathf.c_str() );
-    string matf = fname + ".mat" + std::to_string(gMode);
-    ofstream matfile ( matf.c_str() );
-    logfile << argv[0] << " " << argv[1] << endl;
+    time_t start,end;
+    time(&start);
+    parameters param(argc, argv);
+//    params.print_help();
+    param.read_parameters();
+
+
+    ofstream logfile ( param.logf.c_str() );
+    ofstream pathfile ( param.pathf.c_str() );
+    ofstream matfile ( param.matf.c_str() );
+
+    param.print_params(logfile, 0);
+    logfile << endl;
+
 
     // read in data:
     vector<vector<int> > sites;
-    readSites( fname + ".sites", sites );
+    readSites( param.fname + ".sites", sites );
     logfile << "Read " << sites[0].size() << " haplotypes with " << sites.size() << " sites" << endl;
     // print2Dvec( sites );
 
     vector<int> locs;
-    readLocs( fname + ".locs", locs);
+    readLocs( param.fname + ".locs", locs);
     logfile << "Read " << locs.size() << " physical positions" << endl;
     // print1Dvec( locs ); cout << endl;
 
     vector<vector<string> > tmp;
     class hapDef hapInfo;
-    readHapInfo( fname + ".hapnames", tmp );
+    readHapInfo( param.fname + ".hapnames", tmp );
     for(int i=0; i < tmp.size(); i++ ) {
         hapInfo.hapName.push_back( tmp[i][0] );
         hapInfo.hapPop.push_back( tmp[i][1] );
@@ -67,21 +52,16 @@ int main(int argc, char *argv[]) {
     }
     logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
 
-    string gmfile = "/home/ccampbell/resources/genetic_map_HapMapII_GRCh37/genetic_map_GRCh37_chr22.txt.gz";
     geneticMap gMap;
-    readGenMap( gmfile, gMap );
+    readGenMap( param.gmfile, gMap );
     logfile << "Read " << gMap.chr.size() << " lines from genetic map" << endl;
 
     //interpolate values from locs:
     positions pos;
     interpGenMap( gMap, locs, pos );
+    logfile << "Interpolated " << pos.cM.size() << " positions from genetic map" << endl;
 
-/*
-
-    // set/get parameters:
-    parameters param;
-    param.n1 = 0;
-    param.n2 = 0;
+    // set/get/update parameters:
     for(int i=0; i < hapInfo.hapPop.size(); i++ ) {
         if( hapInfo.hapPop[i] == "p1" )
             param.n1 += 1;
@@ -89,30 +69,30 @@ int main(int argc, char *argv[]) {
             param.n2 += 1;
     }
     param.S = locs.size() ;
-    param.T = 7;
-    param.u1 = 0.5;
+    param.theta1 = 0.2 / ( 0.2 / param.n1 );
+    param.theta2 = 0.2 / ( 0.2 / param.n2 );
+    param.rho1 = param.rho1 / param.n1;
+    param.rho2 = param.rho2 / param.n2;
+    param.gam1 = param.gam1 / param.n1;
+    param.gam2 = param.gam2 / param.n2;
+    //////
     param.rho = 1.0/100000;
     param.gam = 1.0/10000;
     param.lam = 1.0/500;
     param.theta = 1.0/1000;
+    //////
 
     hmmStates st;
-    if( ( gMode == 0 ) || ( gMode == 2 ) ) {
+    if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         generateXstates( hapInfo, st );
         param.theta = numeric_limits<double>::epsilon(); //1.0/100000;
-    } else if( gMode == 1 ) {
+    } else if( param.mode == 1 ) {
         generateStates( hapInfo, st );
     }
     logfile << "Generated " << st.states.size() << " states" << endl;
-    logfile << "Parameters set:" << endl;
-    logfile << "n1 = " << param.n1 << endl;
-    logfile << "n2 = " << param.n2 << endl;
-    logfile << "nSites = " << param.S << endl;
-    logfile << "u1 = " << param.u1 << endl;
-    logfile << "rho = " << param.rho << endl;
-    logfile << "gamma = " << param.gam << endl;
-    logfile << "lambda = " << param.lam << endl;
-    logfile << "theta = " << param.theta << endl;
+
+    param.print_params(logfile, 1);
+
     // emissions probabilities:
     emissions emit;
     emit.match = (2.0 * (param.n1 + param.n2) + param.theta ) / ( 2.0 * ( (param.n1 + param.n2) + param.theta) );
@@ -129,18 +109,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if( gMode == 0 )
-        logfile << "Model: haplotype-only" << endl;
-    else if( gMode == 1 )
-        logfile << "Model: full haplotype and gene conversion" << endl;
-    else if( gMode == 2 )
-        logfile << "Model: Two pass approach" << endl;
-
     logfile << "Starting forward algorithm..." << endl;;
     vector<double> sprob( st.states.size(), 0 );
-    if( ( gMode == 0 ) || ( gMode == 2 ) ) {
+    if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         getsprobX( sites[0], param, emit, st, obs, sprob );
-    } else if( gMode == 1 ) {
+    } else if( param.mode == 1 ) {
         getsprob( sites[0], param, emit, st, obs, sprob );
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
@@ -165,6 +138,7 @@ int main(int argc, char *argv[]) {
     logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
 
+
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
     vector<string> pppath( sites.size() );
@@ -181,16 +155,13 @@ int main(int argc, char *argv[]) {
     viterbi( sites, locs, param, emit, st, obs, sprob, vit, vpath, vprob );
     // printMat( vit );
 
-    if( ( gMode == 0 ) || ( gMode == 2 ) ) {
+    if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         // find haplotype switches:
         vector<int> swIx;
         for(int j=0; j < pswitch.size(); j++ ) {
             if( pswitch[j] == 1 )
                 swIx.push_back( j );
         }
-        //for(int j=0; j<pswitch.size(); j++)
-        //    cout << pswitch[j] << " ";
-        //cout << endl;
         int width = 10; 
         // expand marks around switches:
         vector<int> repl(2);
@@ -206,10 +177,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    logfile << "Starting path output" << endl;
     vector<double> gcprob( sites.size(), 0.0 );
     vector<double> gcprobPop1( sites.size(), 0.0 );
     vector<double> gcprobPop2( sites.size(), 0.0 );
-    if( ( gMode == 0 ) || ( gMode == 1 ) ) {
+    if( ( param.mode == 0 ) || ( param.mode == 1 ) ) {
         // output Viterbi path and probabilites:
         double csum;
         pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCprob\tGCprobP1\tGCprobP2" << endl;
@@ -245,22 +217,14 @@ int main(int argc, char *argv[]) {
     ////////////////
 
     // restart hmm:
-    if( gMode == 2 ) {
+    if( param.mode == 2 ) {
         logfile.precision (ss);
-        logfile << "Restart hmm" << endl;
+        logfile << endl << "Restart hmm" << endl;
         param.theta = 1.0/1000;
         hmmStates st2;
         generateStates( hapInfo, st2 );
         logfile << "Generated " << st2.states.size() << " states" << endl;
-        logfile << "Parameters set:" << endl;
-        logfile << "n1 = " << param.n1 << endl;
-        logfile << "n2 = " << param.n2 << endl;
-        logfile << "nSites = " << param.S << endl;
-        logfile << "u1 = " << param.u1 << endl;
-        logfile << "rho = " << param.rho << endl;
-        logfile << "gamma = " << param.gam << endl;
-        logfile << "lambda = " << param.lam << endl;
-        logfile << "theta = " << param.theta << endl;
+        param.print_params(logfile, 1);
 
         //logfile << "new emissions" << endl;
         // emissions probabilities:
@@ -308,7 +272,6 @@ int main(int argc, char *argv[]) {
         forward2( sites, locs, param, emit, st, st2, obs, sprob, pswitch, fwd );
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
-
 
         logfile << "Starting backward algorithm..." << endl;
         backward2( sites, locs, param, emit, st, st2, obs, sprob, pswitch, bwd, Pxb );
@@ -362,11 +325,14 @@ int main(int argc, char *argv[]) {
         }
     } // end of 2nd pass
 
-    logfile << "Done!" << endl;
+    time(&end);
+    double running_time = difftime(end,start);
+    //logfile("Run Time = " + output_log::dbl2str_fixed(running_time, 2) + " seconds\n");
+    logfile << "Run Time = " << running_time << endl;
+
     logfile.close();
     pathfile.close();
     matfile.close();
-*/
 }
 
 

@@ -5,7 +5,7 @@ CFLAGS = -Wall -O3 -m64
 CPPFLAGS = -O3 -D_FILE_OFFSET_BITS=64 -std=c++11
 LIB = -lz 
 
-OBJS = CGmix.o readFiles.o hmm.o
+OBJS = CGmix.o readFiles.o hmm.o parameters.o
 
 CGmix: $(OBJS)
 	$(CPP) $(CPPFLAGS) $(OBJS) -o $@ $(LIB)

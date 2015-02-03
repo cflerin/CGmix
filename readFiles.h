@@ -1,4 +1,9 @@
-
+/*
+ * readFiles.h
+ *
+ *  Created on: Nov 7, 2014
+ *      Author: ccampbell
+ */
 
 #ifndef READFILES_H_
 #define READFILES_H_
