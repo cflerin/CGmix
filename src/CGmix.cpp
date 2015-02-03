@@ -29,8 +29,6 @@ int main(int argc, char *argv[]) {
     ofstream matfile ( param.matf.c_str() );
 
     param.print_params(logfile, 0);
-    logfile << endl;
-
 
     // read in data:
     vector<vector<int> > sites;
@@ -77,36 +75,32 @@ int main(int argc, char *argv[]) {
             param.n2 += 1;
     }
     param.S = locs.size() ;
-    param.theta1 = 0.2 / ( 0.2 / param.n1 );
-    param.theta2 = 0.2 / ( 0.2 / param.n2 );
     param.rho1 = param.rho1 / param.n1;
     param.rho2 = param.rho2 / param.n2;
     param.gam1 = param.gam1 / param.n1;
     param.gam2 = param.gam2 / param.n2;
-    //////
-    param.rho = 1.0/100000;
-    param.gam = 1.0/10000;
-    param.lam = 1.0/500;
-    param.theta = 1.0/1000;
-    //////
 
     hmmStates st;
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         generateXstates( hapInfo, st );
-        param.theta = numeric_limits<double>::epsilon(); //1.0/100000;
+        // set theta to ~0 for reduced first pass:
+        param.theta1 = numeric_limits<double>::epsilon();
+        param.theta2 = numeric_limits<double>::epsilon();
     } else if( param.mode == 1 ) {
         generateStates( hapInfo, st );
+        // set theta to a reasonable number for full model:
+        param.theta1 = 0.2 / ( 0.2 + param.n1 );
+        param.theta2 = 0.2 / ( 0.2 + param.n2 );
     }
     logfile << "Generated " << st.states.size() << " states" << endl;
 
-    param.print_params(logfile, 1);
-
     // emissions probabilities:
-    emissions emit;
-    emit.match = (2.0 * (param.n1 + param.n2) + param.theta ) / ( 2.0 * ( (param.n1 + param.n2) + param.theta) );
-    emit.mismatch = param.theta / ( 2.0 * ( ( param.n1 + param.n2 ) + param.theta ) );
-    emit.match = log( emit.match );
-    emit.mismatch = log( emit.mismatch );
+    param.theta1_match = log( 1.0 - param.theta1 );
+    param.theta1_mismatch = log( param.theta1 );
+    param.theta2_match = log( 1.0 - param.theta2 );
+    param.theta2_mismatch = log( param.theta2 );
+
+    param.print_params(logfile, 1);
 
     vector<int> obs( param.S, 0 );
     for(int i=0; i < hapInfo.hN.size(); i++) {
@@ -120,18 +114,18 @@ int main(int argc, char *argv[]) {
     logfile << "Starting forward algorithm..." << endl;;
     vector<double> sprob( st.states.size(), 0 );
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
-        getsprobX( sites[0], param, emit, st, obs, sprob );
+        getsprobX( sites[0], param, st, obs, sprob );
     } else if( param.mode == 1 ) {
-        getsprob( sites[0], param, emit, st, obs, sprob );
+        getsprob( sites[0], param, st, obs, sprob );
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
-    forward( sites, pos, param, emit, st, obs, sprob, fwd );
+    forward( sites, pos, param, st, obs, sprob, fwd );
     // printMat( fwd );
 
     double Pxa, Pxb;
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
-    backward( sites, pos, param, emit, st, obs, sprob, bwd, Pxb );
+    backward( sites, pos, param, st, obs, sprob, bwd, Pxb );
     //
     //logSumExp( fwd[ fwd.size()-1 ], Pxa );
     Pxa = 0.0;
@@ -144,7 +138,6 @@ int main(int argc, char *argv[]) {
     logfile << setprecision(20) << "Pxb= " << Pxb << endl;
     logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
-
 
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
@@ -159,7 +152,7 @@ int main(int argc, char *argv[]) {
     vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
     vector<string> vpath( sites.size() );
     vector<double> vprob( sites.size() , 0.0);
-    viterbi( sites, pos, param, emit, st, obs, sprob, vit, vpath, vprob );
+    viterbi( sites, pos, param, st, obs, sprob, vit, vpath, vprob );
     // printMat( vit );
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
@@ -227,29 +220,28 @@ int main(int argc, char *argv[]) {
     if( param.mode == 2 ) {
         logfile.precision (ss);
         logfile << endl << "Restart hmm" << endl;
-        param.theta = 1.0/1000;
         hmmStates st2;
         generateStates( hapInfo, st2 );
         logfile << "Generated " << st2.states.size() << " states" << endl;
+
+        // reset emissions probabilities for full model:
+        param.theta1 = 0.2 / ( 0.2 + param.n1 );
+        param.theta2 = 0.2 / ( 0.2 + param.n2 );
+        param.theta1_match = log( 1.0 - param.theta1 );
+        param.theta1_mismatch = log( param.theta1 );
+        param.theta2_match = log( 1.0 - param.theta2 );
+        param.theta2_mismatch = log( param.theta2 );
+
         param.print_params(logfile, 1);
 
-        //logfile << "new emissions" << endl;
-        // emissions probabilities:
-        emissions emit;
-        emit.match = (2.0 * (param.n1 + param.n2) + param.theta ) / ( 2.0 * ( (param.n1 + param.n2) + param.theta) );
-        emit.mismatch = param.theta / ( 2.0 * ( ( param.n1 + param.n2 ) + param.theta ) );
-        emit.match = log( emit.match );
-        emit.mismatch = log( emit.mismatch );
-
-        //logfile << "new sprob" << endl;
         if( pswitch[0] == 1 ) {
             sprob.resize( st2.states.size(), 0.0 );
             std::fill( sprob.begin(), sprob.end(), 0.0 );
-            getsprob( sites[0], param, emit, st2, obs, sprob );
+            getsprob( sites[0], param, st2, obs, sprob );
         } else {
             sprob.resize( st.states.size(), 0.0 );
             std::fill( sprob.begin(), sprob.end(), 0.0 );
-            getsprobX( sites[0], param, emit, st, obs, sprob );
+            getsprobX( sites[0], param, st, obs, sprob );
         }
 
         for(int j=0; j < param.S; j++ ) {
@@ -276,12 +268,12 @@ int main(int argc, char *argv[]) {
         }
 
         logfile << "Starting forward algorithm..." << endl;;
-        forward2( sites, pos, param, emit, st, st2, obs, sprob, pswitch, fwd );
+        forward2( sites, pos, param, st, st2, obs, sprob, pswitch, fwd );
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
 
         logfile << "Starting backward algorithm..." << endl;
-        backward2( sites, pos, param, emit, st, st2, obs, sprob, pswitch, bwd, Pxb );
+        backward2( sites, pos, param, st, st2, obs, sprob, pswitch, bwd, Pxb );
         matfile << "backward" << endl;
         writeTmat( bwd, matfile );
 
@@ -306,7 +298,7 @@ int main(int argc, char *argv[]) {
         logfile << "Starting Viterbi algorithm..." << endl;
         vector<string> vpath2( sites.size() );
         vector<double> vprob2( sites.size() , 0.0);
-        viterbi2( sites, pos, param, emit, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
+        viterbi2( sites, pos, param, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
 
         // output Viterbi path and probabilites:
         gcprob.resize( sites.size(), 0.0 );
@@ -330,6 +322,7 @@ int main(int argc, char *argv[]) {
             pathfile << j << "\t" << pos.pos[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t";
             pathfile << vpath2[j] << "\t" << exp(vprob2[j]) << "\t" << pppath2[j] << "\t" << ppprob2[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
         }
+
     } // end of 2nd pass
 
     time(&end);

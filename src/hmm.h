@@ -22,9 +22,6 @@
 
 using namespace std;
 
-struct emissions {
-    double match, mismatch;
-};
 class hmmStates 
 {
     public:
@@ -43,14 +40,12 @@ void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st
 void getsprob( 
         const vector<int> &sites0, 
         const parameters &p, 
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         vector<double> &sprob );
 void getsprobX( 
         const vector<int> &sites0, 
         const parameters &p, 
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         vector<double> &sprob );
@@ -62,7 +57,6 @@ void forward(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
@@ -71,7 +65,6 @@ void forward2(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const hmmStates &st2,
         const vector<int> &obs,
@@ -83,7 +76,6 @@ void backward(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
@@ -93,7 +85,6 @@ void backward2(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const hmmStates &st2,
         const vector<int> &obs,
@@ -121,7 +112,6 @@ void viterbi(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         // const vector<vector<double> > &pprob,
@@ -133,7 +123,6 @@ void viterbi2(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,

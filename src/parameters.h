@@ -38,20 +38,19 @@ class parameters
         double gam1;
         double gam2;
         double lam;
-        double theta1;
-        double theta2;
-        double theta3;
-
-        double rho;
-        double gam;
-        double theta;
+        double theta1;  // determined
+        double theta2;  // determined
+        //double theta3;
+        double theta1_match;    // determined
+        double theta1_mismatch; // determined
+        double theta2_match;    // determined
+        double theta2_mismatch; // determined
 
         parameters(int argc, char *argv[]);
         ~parameters(){};
 
         void read_parameters();
         void print_help();
-        //void print_params();
         void print_params(ofstream &logfile, const int which);
 
     private:

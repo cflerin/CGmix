@@ -69,15 +69,17 @@ void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
 }
 
 void getXtrans(const int &to, const int &from, const double &r, const hmmStates &st, const parameters &p, double &trX ) {
-    double u;
+    double u, rho;
     int nm;
     if( st.Xpop[to] == 1 ) {
         u = p.u1;
         nm = p.n1;
+        rho = p.rho1;
     }
     if( st.Xpop[to] == 2 ) {
         u = 1.0 - p.u1;
         nm = p.n2;
+        rho = p.rho2;
     }
     // cout << "From " << st.Xhap[from] << " To " << st.Xhap[to] ;
     // cout << " | " << u << " " << nm << " ";
@@ -90,7 +92,7 @@ void getXtrans(const int &to, const int &from, const double &r, const hmmStates 
             // cout << " hap sw! ";
             //trX = exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
             //      ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
-            trX = exp( -r * p.T ) * ( 1.0 - exp( -r * p.rho ) ) / nm + 
+            trX = exp( -r * p.T ) * ( 1.0 - exp( -r * rho ) ) / nm + 
                   ( 1.0 - exp( -r * p.T )) * u / nm ;
         }
         if( st.Xhap[from] == st.Xhap[to] ) { // no hap switch
@@ -98,8 +100,8 @@ void getXtrans(const int &to, const int &from, const double &r, const hmmStates 
             //trX = exp( -d * p.rho * p.T ) * exp( -d * p.rho ) + 
             //      exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
             //      ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
-            trX = exp( -r * p.T ) * exp( -r * p.rho ) + 
-                exp( -r * p.T ) * ( 1.0 - exp( -r * p.rho ) ) / nm + 
+            trX = exp( -r * p.T ) * exp( -r * rho ) + 
+                exp( -r * p.T ) * ( 1.0 - exp( -r * rho ) ) / nm + 
                 ( 1.0 - exp( -r * p.T )) * u / nm ;
 
         }
@@ -108,20 +110,22 @@ void getXtrans(const int &to, const int &from, const double &r, const hmmStates 
 }
 
 void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, double &trG ) {
-    double u, a1, a2, a3, a4, a5;
+    double u, a1, a2, a3, a4, a5, gam;
     int nm;
     if( st.Gpop[to] == 1 ) {
         u = p.u1;
         nm = p.n1;
+        gam = p.gam1;
     }
     if( st.Gpop[to] == 2 ) {
         u = 1.0 - p.u1;
         nm = p.n2;
+        gam = p.gam2;
     }
     // 4 //
     if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] != 0 ) ) {
         // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-p.gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + p.gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
+        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
         // 4: Pr(G[j+1]=g | G[j] = g):
         a4 = exp( -p.lam * d ) + a5 ;
         trG = a4;     
@@ -129,29 +133,29 @@ void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st
     // 1 //
     if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] == 0 ) ) {
         // 3: Pr(G[j+1]=0 | G[j] = g):
-        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (p.gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (p.gam * p.T + p.lam * (p.n1 + p.n2) ) ;
+        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (gam * p.T + p.lam * (p.n1 + p.n2) ) ;
         // 1: Pr(G[j+1]=0 | G[j] = 0):
-        a1 = exp( -p.lam * d ) * exp( -p.gam * p.T * d / (p.n1 + p.n2)) + a3 ;
+        a1 = exp( -p.lam * d ) * exp( -gam * p.T * d / (p.n1 + p.n2)) + a3 ;
         trG = a1;
     }
     // 2 //
     if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] != 0 ) ) {
         // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-p.gam * p.T / (p.n1 + p.n2) - p.lam)) - 1)) / ((p.n1 + p.n2) * nm * p.lam + p.gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
+        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
         // 2: Pr(G[j+1]=g | G[j] = 0):
-        a2 = exp( -p.lam * d ) * ( 1.0 - exp( -p.gam * p.T * d / (p.n1 + p.n2))) * u / nm + a5 ;
+        a2 = exp( -p.lam * d ) * ( 1.0 - exp( -gam * p.T * d / (p.n1 + p.n2))) * u / nm + a5 ;
         trG = a2;
     }
     // 3 //
     if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) ) {
         // 3: Pr(G[j+1]=0 | G[j] = g):
-        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (p.gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (p.gam * p.T + p.lam * (p.n1 + p.n2) ) ;
+        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (gam * p.T + p.lam * (p.n1 + p.n2) ) ;
         trG = a3;
     }
     // 5 //
     if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] != 0 ) && ( st.Ghap[from] != st.Ghap[to] ) ) {
         // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-p.gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + p.gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
+        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
         trG = a5;
     }
     trG = log(trG);
@@ -160,25 +164,30 @@ void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st
 void getsprob( 
         const vector<int> &sites0, 
         const parameters &p, 
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         vector<double> &sprob ) {
-    double e;
-    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
-    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
-//    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) );
-//    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) );
-
+    double e, gam, sprob_G0, sprob_G1;
+    // double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
+    // double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
     for(int i=0; i < st.states.size(); i++) {
+        // population-specific gamma:
+        if( st.Gpop[i] == 1 ) { gam = p.gam1; }
+        if( st.Gpop[i] == 2 ) { gam = p.gam2; }
+        // emissions:
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
-            e = emit.match;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_match; }
+            if( st.Xpop[i] == 2 ) { e = p.theta2_match; }
         } else {
-            e = emit.mismatch;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_mismatch; }
+            if( st.Xpop[i] == 2 ) { e = p.theta2_mismatch; }
         }
+        //
         if( st.Ghap[i] == 0 ) {
+            sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * ( p.n1 + p.n1 ) + gam * p.T ) );
             sprob[i] =  sprob_G0 + e;
         } else {
+            sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) + gam * p.T ) ) );
             sprob[i] =  sprob_G1 + e;
         }
     }
@@ -187,7 +196,6 @@ void getsprob(
 void getsprobX(
         const vector<int> &sites0,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         vector<double> &sprob ) {
@@ -195,15 +203,17 @@ void getsprobX(
     double sprobX = log( 1.0 / ( p.n1 + p.n2 ) );
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Xindx[i] ] == obs[0] ) {
-            e = emit.match;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_match; }
+            if( st.Xpop[i] == 2 ) { e = p.theta2_match; }
         } else {
-            e = emit.mismatch;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_mismatch; }
+            if( st.Xpop[i] == 2 ) { e = p.theta2_mismatch; }
         }
         sprob[i] = sprobX + e;
     }
 }
 
-double lookupXtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, vector<double> &trXbin ) {
+double lookupXtrans(const int &to, const int &from, const double &r, const hmmStates &st, const parameters &p, vector<double> &trXbin ) {
     int type;
     double trX;
     if( st.Xpop[from] != st.Xpop[to] ) {
@@ -219,7 +229,7 @@ double lookupXtrans(const int &to, const int &from, const int &d, const hmmState
         type += 3;
     //cout << " type" << type << " ";
     if( trXbin[ type ] == 99 ) { // this transition hasn't been set yet:
-        getXtrans( to, from, d, st, p, trX);
+        getXtrans( to, from, r, st, p, trX);
         trXbin[ type ] = trX;
         return( trX );
     } else { // lookup and return a value already seen:
@@ -259,7 +269,6 @@ void forward(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
@@ -283,7 +292,7 @@ void forward(
         for(int t=0; t < st.states.size(); t++) {
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int f=0; f < st.states.size(); f++) {
-                trX = lookupXtrans( t, f, d, st, p, trXbin );
+                trX = lookupXtrans( t, f, r, st, p, trXbin );
                 if( p.mode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin );
                     tmp[f] = fwd[j-1][f] + trX + trG;
@@ -293,9 +302,11 @@ void forward(
                 //cout << "t= " << st.states[t] << " f= " << st.states[f] << " fwd[j-1][f]= " << fwd[j-1][f] << " trX= " << trX << endl;
             } // end 'from' loop
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             logSumExp( tmp, lsum );
             fwd[j][t] = e + lsum;
@@ -310,7 +321,6 @@ void forward2(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const hmmStates &st2,
         const vector<int> &obs,
@@ -341,7 +351,7 @@ void forward2(
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int f=0; f < fwd[j-1].size(); f++) {
                 //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
-                trX = lookupXtrans( t, f, d, st2, p, trXbin );
+                trX = lookupXtrans( t, f, r, st2, p, trXbin );
                 if( ( pswitch[j] == 1 ) || ( pswitch[j-1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
                     trG = lookupGtrans( t, f, d, st2, p, trGbin );
@@ -352,9 +362,11 @@ void forward2(
                 }
             } // end 'from' loop
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st2.Xpop[t] == 1 ) { e = p.theta1_match; }
+                if( st2.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             logSumExp( tmp, lsum );
             fwd[j][t] = e + lsum;
@@ -368,7 +380,6 @@ void backward(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
@@ -393,12 +404,14 @@ void backward(
         for(int f=0; f < st.states.size(); f++ ) {
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int t=0; t < st.states.size(); t++ ) {
-                trX = lookupXtrans( t, f, d, st, p, trXbin);
+                trX = lookupXtrans( t, f, r, st, p, trXbin);
                 //cout << "j= " << j << "\tf= " << f << "\tt= " << t;
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    e = emit.match;
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                    if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
                 } else {
-                    e = emit.mismatch;
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                    if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
                 }
                 if( p.mode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
@@ -434,7 +447,6 @@ void backward2(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const hmmStates &st2,
         const vector<int> &obs,
@@ -464,11 +476,13 @@ void backward2(
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int t=0; t < bwd[j+1].size(); t++ ) {
                 //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
-                trX = lookupXtrans( t, f, d, st2, p, trXbin);
+                trX = lookupXtrans( t, f, r, st2, p, trXbin);
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    e = emit.match;
+                    if( st2.Xpop[t] == 1 ) { e = p.theta1_match; }
+                    if( st2.Xpop[t] == 2 ) { e = p.theta2_match; }
                 } else {
-                    e = emit.mismatch;
+                    if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                    if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
                 }
                 if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
@@ -584,7 +598,7 @@ void postDecode(
             pprob[j][i] = exp( pprob[j][i] ) / csum;
         }
     }
-    // find most proable path:
+    // find most probable path:
     int maxix = -1;
     double pmax;
     for(int j=0; j < pprob.size(); j++ ) {
@@ -606,7 +620,6 @@ void viterbi(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
@@ -633,7 +646,7 @@ void viterbi(
         for(int t=0; t < st.states.size(); t++ ) {
             vmax = negInf;
             for(int f=0; f < st.states.size(); f++ ) {
-                trX = lookupXtrans( t, f, d, st, p, trXbin);
+                trX = lookupXtrans( t, f, r, st, p, trXbin);
                 if( p.mode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
@@ -645,9 +658,11 @@ void viterbi(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             vit[j][t] = e + vmax;
         } // end to loop
@@ -676,7 +691,7 @@ void viterbi(
         t = maxix;
         vmax = negInf;
         for(int f=0; f < st.states.size(); f++) {
-            trX = lookupXtrans( t, f, d, st, p, trXbin);
+            trX = lookupXtrans( t, f, r, st, p, trXbin);
             if( p.mode == 1 ) {
                 trG = lookupGtrans( t, f, d, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
@@ -700,7 +715,6 @@ void viterbi2(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
-        const emissions &emit,
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
@@ -729,7 +743,7 @@ void viterbi2(
         for(int t=0; t < vit[j].size(); t++ ) {
             vmax = negInf;
             for(int f=0; f < vit[j-1].size(); f++ ) {
-                trX = lookupXtrans( t, f, d, st, p, trXbin);
+                trX = lookupXtrans( t, f, r, st, p, trXbin);
                 if( ( pswitch[j] == 1 ) | ( pswitch[j-1] == 1 ) ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
@@ -741,9 +755,11 @@ void viterbi2(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             vit[j][t] = e + vmax;
         } // end to loop
@@ -772,7 +788,7 @@ void viterbi2(
         t = maxix;
         vmax = negInf;
         for(int f=0; f < vit[j].size(); f++) {
-            trX = lookupXtrans( t, f, d, st, p, trXbin);
+            trX = lookupXtrans( t, f, r, st, p, trXbin);
             if( pswitch[j] == 1 ) {
                 trG = lookupGtrans( t, f, d, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
