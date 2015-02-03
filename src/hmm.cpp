@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void generateStates(const class hapDef& hapInfo, class hmmStates& st ) {
+void generateStates(const hapDef &hapInfo, hmmStates &st ) {
     int nrow = hapInfo.hN.size() - 1 ;
     // G null states:
     for (int j=0; j < nrow; j++) { 
@@ -46,7 +46,7 @@ void generateStates(const class hapDef& hapInfo, class hmmStates& st ) {
     }
 }
 
-void generateXstates(const class hapDef& hapInfo, class hmmStates& st ) {
+void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
     int nrow = hapInfo.hN.size() - 1 ;
     // Haplotype states only:
     for (int j=0; j < nrow; j++) {
@@ -68,7 +68,7 @@ void generateXstates(const class hapDef& hapInfo, class hmmStates& st ) {
     }
 }
 
-void getXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trX ) {
+void getXtrans(const int &to, const int &from, const double &r, const hmmStates &st, const parameters &p, double &trX ) {
     double u;
     int nm;
     if( st.Xpop[to] == 1 ) {
@@ -83,24 +83,31 @@ void getXtrans(const int& to, const int& from, const int& d, const class hmmStat
     // cout << " | " << u << " " << nm << " ";
     if( st.Xpop[from] != st.Xpop[to] ) { // ancestry and haplotype switch:
         // cout << " anc sw! ";
-        trX = ( 1.0 - exp( -d * p.rho * p.T ) ) * u/nm;
+        //trX = ( 1.0 - exp( -d * p.rho * p.T ) ) * u/nm;
+        trX = ( 1.0 - exp( -r * p.T ) ) * u/nm;
     } else { // no ancestry switch
         if( st.Xhap[from] != st.Xhap[to] ) { // hap switch
             // cout << " hap sw! ";
-            trX = exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
-                  ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
+            //trX = exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
+            //      ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
+            trX = exp( -r * p.T ) * ( 1.0 - exp( -r * p.rho ) ) / nm + 
+                  ( 1.0 - exp( -r * p.T )) * u / nm ;
         }
         if( st.Xhap[from] == st.Xhap[to] ) { // no hap switch
             // cout << " cont! ";
-            trX = exp( -d * p.rho * p.T ) * exp( -d * p.rho ) + 
-                  exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
-                  ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
+            //trX = exp( -d * p.rho * p.T ) * exp( -d * p.rho ) + 
+            //      exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
+            //      ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
+            trX = exp( -r * p.T ) * exp( -r * p.rho ) + 
+                exp( -r * p.T ) * ( 1.0 - exp( -r * p.rho ) ) / nm + 
+                ( 1.0 - exp( -r * p.T )) * u / nm ;
+
         }
     }
     trX = log(trX);
 }
 
-void getGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, double& trG ) {
+void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, double &trG ) {
     double u, a1, a2, a3, a4, a5;
     int nm;
     if( st.Gpop[to] == 1 ) {
@@ -151,12 +158,12 @@ void getGtrans(const int& to, const int& from, const int& d, const class hmmStat
 }
 
 void getsprob( 
-        const vector<int>& sites0, 
-        const struct parameters& p, 
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const vector<int>& obs,
-        vector<double>& sprob ) {
+        const vector<int> &sites0, 
+        const parameters &p, 
+        const emissions &emit,
+        const hmmStates &st,
+        const vector<int> &obs,
+        vector<double> &sprob ) {
     double e;
     double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
     double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
@@ -178,12 +185,12 @@ void getsprob(
 }
 
 void getsprobX(
-        const vector<int>& sites0,
-        const struct parameters& p,
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const vector<int>& obs,
-        vector<double>& sprob ) {
+        const vector<int> &sites0,
+        const parameters &p,
+        const emissions &emit,
+        const hmmStates &st,
+        const vector<int> &obs,
+        vector<double> &sprob ) {
     double e;
     double sprobX = log( 1.0 / ( p.n1 + p.n2 ) );
     for(int i=0; i < st.states.size(); i++) {
@@ -196,7 +203,7 @@ void getsprobX(
     }
 }
 
-double lookupXtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, vector<double>& trXbin ) {
+double lookupXtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, vector<double> &trXbin ) {
     int type;
     double trX;
     if( st.Xpop[from] != st.Xpop[to] ) {
@@ -221,7 +228,7 @@ double lookupXtrans(const int& to, const int& from, const int& d, const class hm
     }
 }
 
-double lookupGtrans(const int& to, const int& from, const int& d, const class hmmStates& st, const struct parameters& p, vector<double>& trGbin ) {
+double lookupGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, vector<double> &trGbin ) {
     double trG;
     int type;
     if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] != 0 ) )
@@ -249,16 +256,16 @@ double lookupGtrans(const int& to, const int& from, const int& d, const class hm
 }
 
 void forward( 
-        const vector<vector<int> >& sites,
-        const vector<int>& dvec,
-        const struct parameters& p,
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const vector<int>& obs,
-        const vector<double>& sprob,
-        vector<vector<double> >& fwd ) {
+        const vector<vector<int> > &sites,
+        const positions &pos,
+        const parameters &p,
+        const emissions &emit,
+        const hmmStates &st,
+        const vector<int> &obs,
+        const vector<double> &sprob,
+        vector<vector<double> > &fwd ) {
     int d;
-    double lsum, trX, trG, e;
+    double lsum, trX, trG, e, r;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
@@ -271,7 +278,8 @@ void forward(
     // starting prob: 
     fwd[0] = sprob;
     for(int j=1; j < sites.size() ; j++ ) {
-        d = dvec[j] - dvec[j-1];
+        d = pos.pos[j] - pos.pos[j-1];
+        r = pos.cM[j] - pos.cM[j-1];
         for(int t=0; t < st.states.size(); t++) {
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int f=0; f < st.states.size(); f++) {
@@ -299,20 +307,20 @@ void forward(
 }
 
 void forward2(
-        const vector<vector<int> >& sites,
-        const vector<int>& dvec,
-        const struct parameters& p,
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const class hmmStates& st2,
-        const vector<int>& obs,
-        const vector<double>& sprob,
-        const vector<int>& pswitch,
-        vector<vector<double> >& fwd ) {
+        const vector<vector<int> > &sites,
+        const positions &pos,
+        const parameters &p,
+        const emissions &emit,
+        const hmmStates &st,
+        const hmmStates &st2,
+        const vector<int> &obs,
+        const vector<double> &sprob,
+        const vector<int> &pswitch,
+        vector<vector<double> > &fwd ) {
     // starting prob:
     fwd[0] = sprob;
     int d;
-    double lsum, trX, trG, e;
+    double lsum, trX, trG, e, r;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
@@ -320,7 +328,8 @@ void forward2(
     //cout << "pswitch"<<pswitch.size() << endl;
     for(int j=1; j < sites.size() ; j++ ) {
         //cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << fwd[j].size() << endl;
-        d = dvec[j] - dvec[j-1];
+        d = pos.pos[j] - pos.pos[j-1];
+        r = pos.cM[j] - pos.cM[j-1];
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
@@ -356,16 +365,16 @@ void forward2(
 }
 
 void backward(
-        const vector<vector<int> >& sites,
-        const vector<int>& dvec,
-        const struct parameters& p,
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const vector<int>& obs,
-        const vector<double>& sprob,
-        vector<vector<double> >& bwd,
-        double& Pxb) {
-    double e, lsum, trX, trG;
+        const vector<vector<int> > &sites,
+        const positions &pos,
+        const parameters &p,
+        const emissions &emit,
+        const hmmStates &st,
+        const vector<int> &obs,
+        const vector<double> &sprob,
+        vector<vector<double> > &bwd,
+        double &Pxb) {
+    double e, lsum, trX, trG, r;
     // double negInf = - std::numeric_limits<double>::infinity();
     // double log_eps = log(numeric_limits<double>::epsilon());
     int d;
@@ -379,7 +388,8 @@ void backward(
         siteIndx = st.Xindx;
     }
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
-        d = dvec[j+1] - dvec[j];
+        d = pos.pos[j] - pos.pos[j-1];
+        r = pos.cM[j] - pos.cM[j-1];
         for(int f=0; f < st.states.size(); f++ ) {
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int t=0; t < st.states.size(); t++ ) {
@@ -421,18 +431,18 @@ void backward(
 }
 
 void backward2(
-        const vector<vector<int> >& sites,
-        const vector<int>& dvec,
-        const struct parameters& p,
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const class hmmStates& st2,
-        const vector<int>& obs,
-        const vector<double>& sprob,
-        const vector<int>& pswitch,
-        vector<vector<double> >& bwd,
-        double& Pxb ) {
-    double e, lsum, trX, trG;
+        const vector<vector<int> > &sites,
+        const positions &pos,
+        const parameters &p,
+        const emissions &emit,
+        const hmmStates &st,
+        const hmmStates &st2,
+        const vector<int> &obs,
+        const vector<double> &sprob,
+        const vector<int> &pswitch,
+        vector<vector<double> > &bwd,
+        double &Pxb ) {
+    double e, lsum, trX, trG, r;
     double negInf = - std::numeric_limits<double>::infinity();
     double log_eps = log(numeric_limits<double>::epsilon());
     int d;
@@ -442,7 +452,8 @@ void backward2(
     vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
         //cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << bwd[j].size() << endl;
-        d = dvec[j+1] - dvec[j];
+        d = pos.pos[j] - pos.pos[j-1];
+        r = pos.cM[j] - pos.cM[j-1];
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
@@ -487,7 +498,7 @@ void backward2(
     //logSumExp(tmp,Pxb);
 }
 
-void printMat( const vector<vector<double> >& mat ) {
+void printMat( const vector<vector<double> > &mat ) {
     for(int i=0; i < mat[0].size(); i++ ) {
         for(int j=0; j < mat.size(); j++ ) {
             cout << setprecision(15) << mat[j][i] << " ";
@@ -496,7 +507,7 @@ void printMat( const vector<vector<double> >& mat ) {
     }
 }
 
-void writeMat( const vector<vector<double> >& mat, ofstream &matfile ) {
+void writeMat( const vector<vector<double> > &mat, ofstream &matfile ) {
     for(int i=0; i < mat[0].size(); i++ ) {
         for(int j=0; j < mat.size(); j++ ) {
             matfile << setprecision(15) << mat[j][i] << " ";
@@ -505,7 +516,7 @@ void writeMat( const vector<vector<double> >& mat, ofstream &matfile ) {
     }
 }
 
-void writeTmat( const vector<vector<double> >& mat, ofstream &matfile ) {
+void writeTmat( const vector<vector<double> > &mat, ofstream &matfile ) {
     for(int j=0; j < mat.size(); j++ ) {
         for(int i=0; i < mat[j].size(); i++ ) {
             matfile << setprecision(15) << mat[j][i] << " ";
@@ -514,7 +525,7 @@ void writeTmat( const vector<vector<double> >& mat, ofstream &matfile ) {
     }
 }
 
-void logSumExp( const vector<double>& vec, double& lse ) {
+void logSumExp( const vector<double> &vec, double &lse ) {
     double max = - std::numeric_limits<double>::max();
     for(int i=0; i < vec.size(); i++ ) {
         if( vec[i] > max )
@@ -532,14 +543,14 @@ void logSumExp( const vector<double>& vec, double& lse ) {
 }
 
 void postDecode(
-        const vector<vector<double> >& fwd,
-        const vector<vector<double> >& bwd,
-        const hmmStates& st,
-        const double& Px,
-        vector<vector<double> >& pprob,
-        vector<string>& pppath,
-        vector<double>& ppprob,
-        vector<int>& pswitch,
+        const vector<vector<double> > &fwd,
+        const vector<vector<double> > &bwd,
+        const hmmStates &st,
+        const double &Px,
+        vector<vector<double> > &pprob,
+        vector<string> &pppath,
+        vector<double> &ppprob,
+        vector<int> &pswitch,
         ofstream &logfile
         ) {
     if( fwd[ fwd.size()-1 ].size() != bwd[0].size() ) {
@@ -592,21 +603,21 @@ void postDecode(
 }
 
 void viterbi(
-        const vector<vector<int> >& sites,
-        const vector<int>& dvec,
-        const struct parameters& p,
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const vector<int>& obs,
-        const vector<double>& sprob,
-        vector<vector<double> >& vit,
-        vector<string>& vpath,
-        vector<double>& vprob ) {
+        const vector<vector<int> > &sites,
+        const positions &pos,
+        const parameters &p,
+        const emissions &emit,
+        const hmmStates &st,
+        const vector<int> &obs,
+        const vector<double> &sprob,
+        vector<vector<double> > &vit,
+        vector<string> &vpath,
+        vector<double> &vprob ) {
     // starting prob:
     vit[0] = sprob;
     // recursion:
     int d;
-    double trX, trG, vmax, tmp, e;
+    double trX, trG, vmax, tmp, e, r;
     double negInf = - std::numeric_limits<double>::infinity();
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
@@ -617,7 +628,8 @@ void viterbi(
         siteIndx = st.Xindx;
     }
     for(int j=1; j < sites.size() ; j++ ) {
-        d = dvec[j] - dvec[j-1];
+        d = pos.pos[j] - pos.pos[j-1];
+        r = pos.cM[j] - pos.cM[j-1];
         for(int t=0; t < st.states.size(); t++ ) {
             vmax = negInf;
             for(int f=0; f < st.states.size(); f++ ) {
@@ -685,29 +697,30 @@ void viterbi(
 }
 
 void viterbi2(
-        const vector<vector<int> >& sites,
-        const vector<int>& dvec,
-        const struct parameters& p,
-        const struct emissions& emit,
-        const class hmmStates& st,
-        const vector<int>& obs,
-        const vector<double>& sprob,
-        const vector<int>& pswitch,
-        vector<vector<double> >& vit,
-        vector<string>& vpath,
-        vector<double>& vprob ) {
+        const vector<vector<int> > &sites,
+        const positions &pos,
+        const parameters &p,
+        const emissions &emit,
+        const hmmStates &st,
+        const vector<int> &obs,
+        const vector<double> &sprob,
+        const vector<int> &pswitch,
+        vector<vector<double> > &vit,
+        vector<string> &vpath,
+        vector<double> &vprob ) {
     // starting prob, same as fwd:
     vit[0] = sprob;
     // recursion:
     int d;
-    double trX, trG, vmax, tmp, e;
+    double trX, trG, vmax, tmp, e, r;
     double negInf = - std::numeric_limits<double>::infinity();
     double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
     for(int j=1; j < sites.size() ; j++ ) {
-        d = dvec[j] - dvec[j-1];
+        d = pos.pos[j] - pos.pos[j-1];
+        r = pos.cM[j] - pos.cM[j-1];
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Gindx;
         } else {
@@ -779,7 +792,7 @@ void viterbi2(
     }
 }
 
-void which_max( const vector<double>& vec, int maxindx ) {
+void which_max( const vector<double> &vec, int maxindx ) {
     double tmp = - std::numeric_limits<double>::infinity();
     double maxelement;
     for(int i=0; i < vec.size(); i++ ) {
@@ -789,7 +802,7 @@ void which_max( const vector<double>& vec, int maxindx ) {
     }
 }
 
-void max( const vector<double>& vec, double maxelement ) {
+void max( const vector<double> &vec, double maxelement ) {
     double tmp = - std::numeric_limits<double>::infinity();
     for(int i=0; i < vec.size(); i++ ) {
         tmp = vec[i];
