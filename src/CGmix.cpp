@@ -66,6 +66,9 @@ int main(int argc, char *argv[]) {
     positions pos;
     interpGenMap( gMap, locs, pos );
     logfile << "Interpolated " << pos.cM.size() << " positions from genetic map" << endl;
+    //for(int i=0; i<pos.pos.size(); i++) {
+    //    pos.pos[i] = pos.pos[i]/1000;
+    //}
 
     // set/get/update parameters:
     for(int i=0; i < hapInfo.hapPop.size(); i++ ) {

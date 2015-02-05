@@ -7,7 +7,6 @@
 
 #include "parameters.h"
 
-
 parameters::parameters(int argc, char *argv[]) {
     string tmp;
     for (int i=0; i<argc; i++) {
@@ -27,12 +26,12 @@ parameters::parameters(int argc, char *argv[]) {
     n2 = 0; // set later
     S = 0; // set later
     T = 7.0;
-    u1 = 0.5;
+    u1 = 0.8;
     rho1 = 600.0;
     rho2 = 900.0;
     gam1 = 6000.0;
     gam2 = 9000.0;
-    lam = 1.0/500;
+    lam = 2; // 1.0/500;
     theta1 = 0.0; // set later
     theta2 = 0.0; // set later
     //theta3 = 0.01;
@@ -51,13 +50,13 @@ void parameters::error(string err_msg, int code) {
     exit(code);
 }
 
-
 void parameters::read_parameters() {
     unsigned int i=1;
     string in_str; 
     while ( i < argv.size() ) { 
         in_str = argv[i];
         if (in_str == "--in") { fname = get_arg(i+1); i++; }
+        else if (in_str == "--out") { outfname = get_arg(i+1); i++; }
         else if (in_str == "--gmfile") { gmfile = get_arg(i+1); i++; }
         else if (in_str == "--mode") { mode = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--T") { T = atof( get_arg(i+1).c_str() ); i++; }

@@ -386,8 +386,6 @@ void backward(
         vector<vector<double> > &bwd,
         double &Pxb) {
     double e, lsum, trX, trG, r;
-    // double negInf = - std::numeric_limits<double>::infinity();
-    // double log_eps = log(numeric_limits<double>::epsilon());
     int d;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
@@ -455,8 +453,6 @@ void backward2(
         vector<vector<double> > &bwd,
         double &Pxb ) {
     double e, lsum, trX, trG, r;
-    double negInf = - std::numeric_limits<double>::infinity();
-    double log_eps = log(numeric_limits<double>::epsilon());
     int d;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
@@ -567,9 +563,6 @@ void postDecode(
         vector<int> &pswitch,
         ofstream &logfile
         ) {
-    if( fwd[ fwd.size()-1 ].size() != bwd[0].size() ) {
-        logfile << "Warning: forward[S] length (" << fwd[ fwd.size()-1 ].size() << ") and backward[0] length (" << bwd[0].size() << ") are not equal!" << endl;
-    }
     double negInf = - std::numeric_limits<double>::infinity();
     // decoding:
     for(int j=0; j < pprob.size(); j++ ) {
@@ -728,7 +721,6 @@ void viterbi2(
     int d;
     double trX, trG, vmax, tmp, e, r;
     double negInf = - std::numeric_limits<double>::infinity();
-    double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
