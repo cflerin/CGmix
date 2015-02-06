@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     // print1Dvec( locs ); cout << endl;
 
     vector<vector<string> > tmp;
-    class hapDef hapInfo;
+    hapDef hapInfo;
     readHapInfo( param.fname + ".hapnames", tmp );
     for(int i=0; i < tmp.size(); i++ ) {
         hapInfo.hapName.push_back( tmp[i][0] );
@@ -66,9 +66,12 @@ int main(int argc, char *argv[]) {
     positions pos;
     interpGenMap( gMap, locs, pos );
     logfile << "Interpolated " << pos.cM.size() << " positions from genetic map" << endl;
-    //for(int i=0; i<pos.pos.size(); i++) {
-    //    pos.pos[i] = pos.pos[i]/1000;
-    //}
+    // set kb throughout:
+    for(int i=0; i<pos.pos.size(); i++) {
+        pos.pos[i] = pos.pos[i] / 1000.0;
+        pos.cM[i] = pos.cM[i] / 1000.0;
+        cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
+    }
 
     // set/get/update parameters:
     for(int i=0; i < hapInfo.hapPop.size(); i++ ) {

@@ -162,7 +162,6 @@ void readGenMap(const string &fname, geneticMap &gMap ) {
         // fill genMap values:
         string field;
         stringstream ss(out);
-        unsigned int tmpInt;
         double tmpDbl;
         unsigned int fieldCnt = 0;
         while( std::getline( ss, field, '\t' ) ) {
@@ -170,8 +169,8 @@ void readGenMap(const string &fname, geneticMap &gMap ) {
                 gMap.chr.push_back( field ); 
             }
             if( fieldCnt == 1 ) { 
-                istringstream( field ) >> tmpInt;
-                gMap.pos.push_back( tmpInt );
+                istringstream( field ) >> tmpDbl;
+                gMap.pos.push_back( tmpDbl );
             }
             if( fieldCnt == 2 ) { 
                 istringstream( field ) >> tmpDbl;

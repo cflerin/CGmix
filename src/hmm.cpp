@@ -74,12 +74,14 @@ void getXtrans(const int &to, const int &from, const double &r, const hmmStates 
     if( st.Xpop[to] == 1 ) {
         u = p.u1;
         nm = p.n1;
-        rho = p.rho1;
+        //rho = p.rho1;
+        rho = ( 4 * p.Ne1 * r ) / nm;
     }
     if( st.Xpop[to] == 2 ) {
         u = 1.0 - p.u1;
         nm = p.n2;
-        rho = p.rho2;
+        //rho = p.rho2;
+        rho = ( 4 * p.Ne2 * r ) / nm;
     }
     // cout << "From " << st.Xhap[from] << " To " << st.Xhap[to] ;
     // cout << " | " << u << " " << nm << " ";
@@ -109,18 +111,23 @@ void getXtrans(const int &to, const int &from, const double &r, const hmmStates 
     trX = log(trX);
 }
 
-void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, double &trG ) {
-    double u, a1, a2, a3, a4, a5, gam;
+void getGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, double &trG ) {
+    double u, a1, a2, a3, a4, a5, gam, g;
     int nm;
+    g = r * p.f; //scale g
     if( st.Gpop[to] == 1 ) {
         u = p.u1;
         nm = p.n1;
-        gam = p.gam1;
+        //gam = p.gam1;
+        //gam = ( 4 * p.Ne1 * g ) / nm;
+        gam = 6.0;
     }
     if( st.Gpop[to] == 2 ) {
         u = 1.0 - p.u1;
         nm = p.n2;
-        gam = p.gam2;
+        //gam = p.gam2;
+        //gam = ( 4 * p.Ne2 * g ) / nm;
+        gam = 6.0;
     }
     // 4 //
     if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] != 0 ) ) {
@@ -184,10 +191,12 @@ void getsprob(
         }
         //
         if( st.Ghap[i] == 0 ) {
-            sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * ( p.n1 + p.n1 ) + gam * p.T ) );
+            //sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * ( p.n1 + p.n1 ) + gam * p.T ) );
+            sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) );
             sprob[i] =  sprob_G0 + e;
         } else {
-            sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) + gam * p.T ) ) );
+            //sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) + gam * p.T ) ) );
+            sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) );
             sprob[i] =  sprob_G1 + e;
         }
     }
@@ -238,7 +247,7 @@ double lookupXtrans(const int &to, const int &from, const double &r, const hmmSt
     }
 }
 
-double lookupGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, vector<double> &trGbin ) {
+double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin ) {
     double trG;
     int type;
     if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] != 0 ) )
@@ -256,7 +265,7 @@ double lookupGtrans(const int &to, const int &from, const int &d, const hmmState
     //cout << " from" << st.Ghap[from] << " to" << st.Ghap[to];
     //cout << " type" << type << " ";
     if( trGbin[ type ] == 99 ) { // this transition hasn't been set yet:
-        getGtrans( to, from, d, st, p, trG);
+        getGtrans( to, from, d, r, st, p, trG);
         trGbin[ type ] = trG;
         return( trG );
     } else { // lookup and return a value already seen:
@@ -273,8 +282,7 @@ void forward(
         const vector<int> &obs,
         const vector<double> &sprob,
         vector<vector<double> > &fwd ) {
-    int d;
-    double lsum, trX, trG, e, r;
+    double lsum, trX, trG, e, r, d;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
@@ -294,7 +302,7 @@ void forward(
             for(int f=0; f < st.states.size(); f++) {
                 trX = lookupXtrans( t, f, r, st, p, trXbin );
                 if( p.mode == 1 ) {
-                    trG = lookupGtrans( t, f, d, st, p, trGbin );
+                    trG = lookupGtrans( t, f, d, r, st, p, trGbin );
                     tmp[f] = fwd[j-1][f] + trX + trG;
                 } else {
                     tmp[f] = fwd[j-1][f] + trX;
@@ -312,6 +320,26 @@ void forward(
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
+
+        for(int z=0; z<trGbin.size(); z++) {
+            cout << "trGbin[" << z << "]=" << exp(trGbin[z]) << endl;
+        }
+
+        cout << "d=" << d << "\tr=" << r << endl; //"\tgam1=" << p.gam1 << "\tgam2=" << p.gam2 << endl;
+        cout << "j=" << j << " trXsum_p1=" << 
+            exp(trXbin[2]) + exp(trXbin[1])*(p.n1-1) + exp(trXbin[3])*p.n2;
+        cout << " trXsum_p2=" <<
+            exp(trXbin[5]) + exp(trXbin[4])*(p.n2-1) + exp(trXbin[0])*p.n1;
+
+        cout << " trGsum_0=" << 
+            exp(trGbin[0]) + exp(trGbin[1])*(p.n1) + exp(trGbin[6])*p.n2;
+        cout << " trGsum_p1=" <<
+            exp(trGbin[2]) + exp(trGbin[3]) + exp(trGbin[4])*(p.n1-1) + exp(trGbin[9])*p.n2;
+        cout << " trGsum_p2=" <<
+            exp(trGbin[2]) + exp(trGbin[8]) + exp(trGbin[9])*(p.n2-1) + exp(trGbin[4])*p.n1;
+        cout << endl;
+
+
         std::fill( trXbin.begin(), trXbin.end(), 99 );
         std::fill( trGbin.begin(), trGbin.end(), 99 );
     } // end j site loop
@@ -354,7 +382,7 @@ void forward2(
                 trX = lookupXtrans( t, f, r, st2, p, trXbin );
                 if( ( pswitch[j] == 1 ) || ( pswitch[j-1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
-                    trG = lookupGtrans( t, f, d, st2, p, trGbin );
+                    trG = lookupGtrans( t, f, d, r, st2, p, trGbin );
                     tmp[f] = fwd[j-1][f] + trX + trG;
                 } else {
                     //cout << "\ttrx" << endl;
@@ -385,8 +413,7 @@ void backward(
         const vector<double> &sprob,
         vector<vector<double> > &bwd,
         double &Pxb) {
-    double e, lsum, trX, trG, r;
-    int d;
+    double e, lsum, trX, trG, r, d;
     vector<double> trXbin(6,99);
     vector<double> trGbin(10,99);
     vector<int> siteIndx;
@@ -412,7 +439,7 @@ void backward(
                     if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
                 }
                 if( p.mode == 1 ) {
-                    trG = lookupGtrans( t, f, d, st, p, trGbin);
+                    trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                     //cout << "\ttrG= " << trG;
                     tmp[t] = bwd[j+1][t] + trX + trG + e;
                 } else {
@@ -482,7 +509,7 @@ void backward2(
                 }
                 if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
-                    trG = lookupGtrans( t, f, d, st2, p, trGbin);
+                    trG = lookupGtrans( t, f, d, r, st2, p, trGbin);
                     tmp[t] = bwd[j+1][t] + trX + trG + e ;
                 } else {
                     //cout << "\ttrx" << endl;
@@ -641,7 +668,7 @@ void viterbi(
             for(int f=0; f < st.states.size(); f++ ) {
                 trX = lookupXtrans( t, f, r, st, p, trXbin);
                 if( p.mode == 1 ) {
-                    trG = lookupGtrans( t, f, d, st, p, trGbin);
+                    trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
                 } else {
                     tmp = vit[j-1][f] + trX;
@@ -686,7 +713,7 @@ void viterbi(
         for(int f=0; f < st.states.size(); f++) {
             trX = lookupXtrans( t, f, r, st, p, trXbin);
             if( p.mode == 1 ) {
-                trG = lookupGtrans( t, f, d, st, p, trGbin);
+                trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
             } else {
                 tmp = vit[j][f] + trX;
@@ -737,7 +764,7 @@ void viterbi2(
             for(int f=0; f < vit[j-1].size(); f++ ) {
                 trX = lookupXtrans( t, f, r, st, p, trXbin);
                 if( ( pswitch[j] == 1 ) | ( pswitch[j-1] == 1 ) ) {
-                    trG = lookupGtrans( t, f, d, st, p, trGbin);
+                    trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
                 } else {
                     tmp = vit[j-1][f] + trX;
@@ -782,7 +809,7 @@ void viterbi2(
         for(int f=0; f < vit[j].size(); f++) {
             trX = lookupXtrans( t, f, r, st, p, trXbin);
             if( pswitch[j] == 1 ) {
-                trG = lookupGtrans( t, f, d, st, p, trGbin);
+                trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
             } else {
                 tmp = vit[j][f] + trX;

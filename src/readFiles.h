@@ -34,16 +34,14 @@ class geneticMap
         geneticMap(){};
         ~geneticMap(){};
         vector<string> chr;
-        vector<int> pos;
-        vector<double> rate, cM;
+        vector<double> pos, rate, cM;
 };
 class positions 
 {
     public:
         positions(){};
         ~positions(){};
-        vector<int> pos;
-        vector<double> cM;
+        vector<double> pos, cM;
 };
 
 void readSites(const string &sitefname, vector<vector<int> > &sites );

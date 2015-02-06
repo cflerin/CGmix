@@ -26,12 +26,15 @@ parameters::parameters(int argc, char *argv[]) {
     n2 = 0; // set later
     S = 0; // set later
     T = 7.0;
-    u1 = 0.8;
+    u1 = 0.5;
+    Ne1 = 10000;
+    Ne2 = 10000;
+    f = 10.0; // scaling factor for g ( f=gamma/rho, g=f*r, and gamma=4*Ne*g )
     rho1 = 600.0;
     rho2 = 900.0;
     gam1 = 6000.0;
     gam2 = 9000.0;
-    lam = 2; // 1.0/500;
+    lam = 2; // 1.0/500; // 500bp tract length
     theta1 = 0.0; // set later
     theta2 = 0.0; // set later
     //theta3 = 0.01;
@@ -102,6 +105,8 @@ void parameters::print_params(ofstream &logfile, const int which) {
         logfile << "nSites = " << S << endl;
         logfile << "T = " << T << endl;
         logfile << "u1 = " << u1 << endl;
+        logfile << "Ne1 = " << Ne1 << endl;
+        logfile << "Ne2 = " << Ne2 << endl;
         logfile << "rho1 = " << rho1 << endl;
         logfile << "rho2 = " << rho2 << endl;
         logfile << "gamma1 = " << gam1 << endl;
