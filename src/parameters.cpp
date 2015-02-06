@@ -9,11 +9,11 @@
 
 
 parameters::parameters(int argc, char *argv[]) {
-	string tmp;
-	for (int i=0; i<argc; i++) {
-		tmp = argv[i];
-		this->argv.push_back(tmp);
-	}
+    string tmp;
+    for (int i=0; i<argc; i++) {
+        tmp = argv[i];
+        this->argv.push_back(tmp);
+    }
 
     mode = 99;
     fname = "empty" ;
@@ -28,14 +28,17 @@ parameters::parameters(int argc, char *argv[]) {
     S = 0; // set later
     T = 7.0;
     u1 = 0.5;
-    rho1 = 600.0;
-    rho2 = 900.0;
-    gam1 = 0.0;
-    gam2 = 0.0;
+    Ne1 = 10000;
+    Ne2 = 18000;
+    f = 10.0; // scaling factor for g ( f=gamma/rho, g=f*r, and gamma=4*Ne*g )
+    //rho1 = 600.0;
+    //rho2 = 900.0;
+    //gam1 = 0.0;
+    //gam2 = 0.0;
     lam = 1.0/500;
     theta1 = 0.0;
     theta2 = 0.0;
-    theta3 = 0.01;
+    //theta3 = 0.01;
 
     rho = 600.0;
     gam = 100.0;
@@ -65,14 +68,14 @@ void parameters::read_parameters() {
         else if (in_str == "--mode") { mode = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--T") { T = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--u1") { u1 = atof( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--rho1") { rho1 = atof( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--rho2") { rho2 = atof( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--gam1") { gam1 = atof( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--gam2") { gam2 = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--rho1") { rho1 = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--rho2") { rho2 = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--gam1") { gam1 = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--gam2") { gam2 = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--lam") { lam = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta1") { theta1 = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta2") { theta2 = atof( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--theta3") { theta3 = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--theta3") { theta3 = atof( get_arg(i+1).c_str() ); i++; }
         //////
         else if (in_str == "--rho") { rho = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--gam") { gam = atof( get_arg(i+1).c_str() ); i++; }
@@ -111,14 +114,16 @@ void parameters::print_params(ofstream &logfile, const int which) {
         logfile << "nSites = " << S << endl;
         logfile << "T = " << T << endl;
         logfile << "u1 = " << u1 << endl;
-        logfile << "rho1 = " << rho1 << endl;
-        logfile << "rho2 = " << rho2 << endl;
-        logfile << "gamma1 = " << gam1 << endl;
-        logfile << "gamma2 = " << gam2 << endl;
+        logfile << "Ne1 = " << Ne1 << endl;
+        logfile << "Ne2 = " << Ne2 << endl;
+        //logfile << "rho1 = " << rho1 << endl;
+        //logfile << "rho2 = " << rho2 << endl;
+        //logfile << "gamma1 = " << gam1 << endl;
+        //logfile << "gamma2 = " << gam2 << endl;
         logfile << "lambda = " << lam << endl;
         logfile << "theta1 = " << theta1 << endl;
         logfile << "theta2 = " << theta2 << endl;
-        logfile << "theta3 = " << theta3 << endl;
+        //logfile << "theta3 = " << theta3 << endl;
         //
         logfile << "rho = " << rho << endl;
         logfile << "gamma = " << gam << endl;

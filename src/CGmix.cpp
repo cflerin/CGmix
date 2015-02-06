@@ -15,6 +15,14 @@ int main(int argc, char *argv[]) {
 //    params.print_help();
     param.read_parameters();
 
+    if( param.fname == "empty" ) {
+        cout << "Input file not set" << endl;
+        exit(1);
+    }
+    if( param.mode == 99 ) {
+        cout << "Mode must be 0, 1 or 2" << endl;
+        exit(1);
+    }
 
     ofstream logfile ( param.logf.c_str() );
     ofstream pathfile ( param.pathf.c_str() );
@@ -36,7 +44,7 @@ int main(int argc, char *argv[]) {
     // print1Dvec( locs ); cout << endl;
 
     vector<vector<string> > tmp;
-    class hapDef hapInfo;
+    hapDef hapInfo;
     readHapInfo( param.fname + ".hapnames", tmp );
     for(int i=0; i < tmp.size(); i++ ) {
         hapInfo.hapName.push_back( tmp[i][0] );
@@ -60,6 +68,13 @@ int main(int argc, char *argv[]) {
     positions pos;
     interpGenMap( gMap, locs, pos );
     logfile << "Interpolated " << pos.cM.size() << " positions from genetic map" << endl;
+    
+    // set kb throughout:
+    for(int i=0; i<pos.pos.size(); i++) {
+        pos.pos[i] = pos.pos[i] / 1000.0;
+        pos.cM[i] = pos.cM[i] / 1000.0;
+        cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
+    }
 
     // set/get/update parameters:
     for(int i=0; i < hapInfo.hapPop.size(); i++ ) {
@@ -69,12 +84,10 @@ int main(int argc, char *argv[]) {
             param.n2 += 1;
     }
     param.S = locs.size() ;
-    param.theta1 = 0.2 / ( 0.2 / param.n1 );
-    param.theta2 = 0.2 / ( 0.2 / param.n2 );
-    param.rho1 = param.rho1 / param.n1;
-    param.rho2 = param.rho2 / param.n2;
-    param.gam1 = param.gam1 / param.n1;
-    param.gam2 = param.gam2 / param.n2;
+    //param.rho1 = param.rho1 / param.n1;
+    //param.rho2 = param.rho2 / param.n2;
+    //param.gam1 = param.gam1 / param.n1;
+    //param.gam2 = param.gam2 / param.n2;
     //////
     param.rho = 1.0/100000;
     param.gam = 1.0/10000;
@@ -86,12 +99,16 @@ int main(int argc, char *argv[]) {
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         generateXstates( hapInfo, st );
         param.theta = numeric_limits<double>::epsilon(); //1.0/100000;
+        // set theta to ~0 for reduced first pass:
+        param.theta1 = numeric_limits<double>::epsilon();
+        param.theta2 = numeric_limits<double>::epsilon();
     } else if( param.mode == 1 ) {
         generateStates( hapInfo, st );
+        // set theta to a reasonable number for full model:
+        param.theta1 = 0.2 / ( 0.2 + param.n1 );
+        param.theta2 = 0.2 / ( 0.2 + param.n2 );
     }
     logfile << "Generated " << st.states.size() << " states" << endl;
-
-    param.print_params(logfile, 1);
 
     // emissions probabilities:
     emissions emit;
@@ -99,6 +116,12 @@ int main(int argc, char *argv[]) {
     emit.mismatch = param.theta / ( 2.0 * ( ( param.n1 + param.n2 ) + param.theta ) );
     emit.match = log( emit.match );
     emit.mismatch = log( emit.mismatch );
+    param.theta1_match = log( 1.0 - param.theta1 );
+    param.theta1_mismatch = log( param.theta1 );
+    param.theta2_match = log( 1.0 - param.theta2 );
+    param.theta2_mismatch = log( param.theta2 );
+
+    param.print_params(logfile, 1);
 
     vector<int> obs( param.S, 0 );
     for(int i=0; i < hapInfo.hN.size(); i++) {
@@ -137,7 +160,9 @@ int main(int argc, char *argv[]) {
     logfile << setprecision(20) << "Pxb= " << Pxb << endl;
     logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
-
+    if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
+        cout << "Warning: P(x) diff=" << Pxa - Pxb << endl;
+    }
 
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
@@ -221,6 +246,10 @@ int main(int argc, char *argv[]) {
         logfile.precision (ss);
         logfile << endl << "Restart hmm" << endl;
         param.theta = 1.0/1000;
+        // set theta to a reasonable number for full model:
+        param.theta1 = 0.2 / ( 0.2 + param.n1 );
+        param.theta2 = 0.2 / ( 0.2 + param.n2 );
+
         hmmStates st2;
         generateStates( hapInfo, st2 );
         logfile << "Generated " << st2.states.size() << " states" << endl;
@@ -287,6 +316,10 @@ int main(int argc, char *argv[]) {
         logfile << setprecision(20) << "Pxa= " << Pxa << endl;
         logfile << setprecision(20) << "Pxb= " << Pxb << endl;
         logfile << "diff= " << Pxa - Pxb << endl;
+
+        if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
+            cout << "Warning: P(x) diff=" << Pxa - Pxb << endl;
+        }
 
         logfile << "Starting posterior decoding..." << endl;
         vector<string> pppath2( sites.size() );

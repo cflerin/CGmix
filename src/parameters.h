@@ -33,14 +33,20 @@ class parameters
         int S;          // determined
         double T;
         double u1;
-        double rho1;
-        double rho2;
-        double gam1;
-        double gam2;
+        double Ne1;
+        double Ne2;
+        double f;
+        //double rho1;
+        //double rho2;
+        //double gam1;
+        //double gam2;
         double lam;
-        double theta1;
-        double theta2;
-        double theta3;
+        double theta1;  // determined
+        double theta2;  // determined
+        double theta1_match;    // determined
+        double theta1_mismatch; // determined
+        double theta2_match;    // determined
+        double theta2_mismatch; // determined
 
         double rho;
         double gam;

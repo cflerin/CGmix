@@ -542,9 +542,6 @@ void postDecode(
         vector<int>& pswitch,
         ofstream &logfile
         ) {
-    if( fwd[ fwd.size()-1 ].size() != bwd[0].size() ) {
-        logfile << "Warning: forward[S] length (" << fwd[ fwd.size()-1 ].size() << ") and backward[0] length (" << bwd[0].size() << ") are not equal!" << endl;
-    }
     double negInf = - std::numeric_limits<double>::infinity();
     // decoding:
     for(int j=0; j < pprob.size(); j++ ) {
