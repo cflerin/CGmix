@@ -153,7 +153,6 @@ void getGtrans(const int& to, const int& from, const int& d, const class hmmStat
 void getsprob( 
         const vector<int>& sites0, 
         const struct parameters& p, 
-        const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         vector<double>& sprob ) {
@@ -165,9 +164,11 @@ void getsprob(
 
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
-            e = emit.match;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_match; }
+            else if( st.Xpop[i] == 2 ) { e = p.theta2_match; }
         } else {
-            e = emit.mismatch;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_mismatch; }
+            else if( st.Xpop[i] == 2 ) { e = p.theta2_mismatch; }
         }
         if( st.Ghap[i] == 0 ) {
             sprob[i] =  sprob_G0 + e;
@@ -180,7 +181,6 @@ void getsprob(
 void getsprobX(
         const vector<int>& sites0,
         const struct parameters& p,
-        const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         vector<double>& sprob ) {
@@ -188,9 +188,11 @@ void getsprobX(
     double sprobX = log( 1.0 / ( p.n1 + p.n2 ) );
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Xindx[i] ] == obs[0] ) {
-            e = emit.match;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_match; }
+            else if( st.Xpop[i] == 2 ) { e = p.theta2_match; }
         } else {
-            e = emit.mismatch;
+            if( st.Xpop[i] == 1 ) { e = p.theta1_mismatch; }
+            else if( st.Xpop[i] == 2 ) { e = p.theta2_mismatch; }
         }
         sprob[i] = sprobX + e;
     }
@@ -252,7 +254,6 @@ void forward(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
         const struct parameters& p,
-        const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         const vector<double>& sprob,
@@ -285,9 +286,11 @@ void forward(
                 //cout << "t= " << st.states[t] << " f= " << st.states[f] << " fwd[j-1][f]= " << fwd[j-1][f] << " trX= " << trX << endl;
             } // end 'from' loop
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             logSumExp( tmp, lsum );
             fwd[j][t] = e + lsum;
@@ -302,7 +305,6 @@ void forward2(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
         const struct parameters& p,
-        const struct emissions& emit,
         const class hmmStates& st,
         const class hmmStates& st2,
         const vector<int>& obs,
@@ -343,9 +345,11 @@ void forward2(
                 }
             } // end 'from' loop
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             logSumExp( tmp, lsum );
             fwd[j][t] = e + lsum;
@@ -359,7 +363,6 @@ void backward(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
         const struct parameters& p,
-        const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         const vector<double>& sprob,
@@ -386,9 +389,11 @@ void backward(
                 trX = lookupXtrans( t, f, d, st, p, trXbin);
                 //cout << "j= " << j << "\tf= " << f << "\tt= " << t;
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    e = emit.match;
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                    else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
                 } else {
-                    e = emit.mismatch;
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                    else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
                 }
                 if( p.mode == 1 ) {
                     trG = lookupGtrans( t, f, d, st, p, trGbin);
@@ -424,7 +429,6 @@ void backward2(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
         const struct parameters& p,
-        const struct emissions& emit,
         const class hmmStates& st,
         const class hmmStates& st2,
         const vector<int>& obs,
@@ -455,9 +459,11 @@ void backward2(
                 //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
                 trX = lookupXtrans( t, f, d, st2, p, trXbin);
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    e = emit.match;
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                    else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
                 } else {
-                    e = emit.mismatch;
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                    else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
                 }
                 if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
@@ -592,7 +598,6 @@ void viterbi(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
         const struct parameters& p,
-        const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         const vector<double>& sprob,
@@ -630,9 +635,11 @@ void viterbi(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             vit[j][t] = e + vmax;
         } // end to loop
@@ -685,7 +692,6 @@ void viterbi2(
         const vector<vector<int> >& sites,
         const vector<int>& dvec,
         const struct parameters& p,
-        const struct emissions& emit,
         const class hmmStates& st,
         const vector<int>& obs,
         const vector<double>& sprob,
@@ -725,9 +731,11 @@ void viterbi2(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = emit.match;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                e = emit.mismatch;
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             vit[j][t] = e + vmax;
         } // end to loop

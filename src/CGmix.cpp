@@ -31,7 +31,6 @@ int main(int argc, char *argv[]) {
     param.print_params(logfile, 0);
     logfile << endl;
 
-
     // read in data:
     vector<vector<int> > sites;
     readSites( param.fname + ".sites", sites );
@@ -73,7 +72,7 @@ int main(int argc, char *argv[]) {
     for(int i=0; i<pos.pos.size(); i++) {
         pos.pos[i] = pos.pos[i] / 1000.0;
         pos.cM[i] = pos.cM[i] / 1000.0;
-        cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
+        //cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
     }
 
     // set/get/update parameters:
@@ -111,15 +110,12 @@ int main(int argc, char *argv[]) {
     logfile << "Generated " << st.states.size() << " states" << endl;
 
     // emissions probabilities:
-    emissions emit;
-    emit.match = (2.0 * (param.n1 + param.n2) + param.theta ) / ( 2.0 * ( (param.n1 + param.n2) + param.theta) );
-    emit.mismatch = param.theta / ( 2.0 * ( ( param.n1 + param.n2 ) + param.theta ) );
-    emit.match = log( emit.match );
-    emit.mismatch = log( emit.mismatch );
     param.theta1_match = log( 1.0 - param.theta1 );
     param.theta1_mismatch = log( param.theta1 );
     param.theta2_match = log( 1.0 - param.theta2 );
     param.theta2_mismatch = log( param.theta2 );
+    //cout << "theta1 " << exp( param.theta1_match ) << "\t" << exp( param.theta1_mismatch ) << endl;
+    //cout << "theta2 " << exp( param.theta2_match ) << "\t" << exp( param.theta2_mismatch ) << endl;
 
     param.print_params(logfile, 1);
 
@@ -135,19 +131,18 @@ int main(int argc, char *argv[]) {
     logfile << "Starting forward algorithm..." << endl;;
     vector<double> sprob( st.states.size(), 0 );
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
-        getsprobX( sites[0], param, emit, st, obs, sprob );
+        getsprobX( sites[0], param, st, obs, sprob );
     } else if( param.mode == 1 ) {
-        getsprob( sites[0], param, emit, st, obs, sprob );
+        getsprob( sites[0], param, st, obs, sprob );
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
-    forward( sites, locs, param, emit, st, obs, sprob, fwd );
+    forward( sites, locs, param, st, obs, sprob, fwd );
     // printMat( fwd );
 
     double Pxa, Pxb;
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
-    //backward( sites, locs, param, emit, st, obs, bwd );
-    backward( sites, locs, param, emit, st, obs, sprob, bwd, Pxb );
+    backward( sites, locs, param, st, obs, sprob, bwd, Pxb );
     //
     //logSumExp( fwd[ fwd.size()-1 ], Pxa );
     Pxa = 0.0;
@@ -160,9 +155,9 @@ int main(int argc, char *argv[]) {
     logfile << setprecision(20) << "Pxb= " << Pxb << endl;
     logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
-    if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
-        cout << "Warning: P(x) diff=" << Pxa - Pxb << endl;
-    }
+    //if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
+        cout << "P(x) diff=" << Pxa - Pxb << endl;
+    //}
 
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
@@ -177,7 +172,7 @@ int main(int argc, char *argv[]) {
     vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
     vector<string> vpath( sites.size() );
     vector<double> vprob( sites.size() , 0.0);
-    viterbi( sites, locs, param, emit, st, obs, sprob, vit, vpath, vprob );
+    viterbi( sites, locs, param, st, obs, sprob, vit, vpath, vprob );
     // printMat( vit );
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
@@ -255,23 +250,15 @@ int main(int argc, char *argv[]) {
         logfile << "Generated " << st2.states.size() << " states" << endl;
         param.print_params(logfile, 1);
 
-        //logfile << "new emissions" << endl;
-        // emissions probabilities:
-        emissions emit;
-        emit.match = (2.0 * (param.n1 + param.n2) + param.theta ) / ( 2.0 * ( (param.n1 + param.n2) + param.theta) );
-        emit.mismatch = param.theta / ( 2.0 * ( ( param.n1 + param.n2 ) + param.theta ) );
-        emit.match = log( emit.match );
-        emit.mismatch = log( emit.mismatch );
-
         //logfile << "new sprob" << endl;
         if( pswitch[0] == 1 ) {
             sprob.resize( st2.states.size(), 0.0 );
             std::fill( sprob.begin(), sprob.end(), 0.0 );
-            getsprob( sites[0], param, emit, st2, obs, sprob );
+            getsprob( sites[0], param, st2, obs, sprob );
         } else {
             sprob.resize( st.states.size(), 0.0 );
             std::fill( sprob.begin(), sprob.end(), 0.0 );
-            getsprobX( sites[0], param, emit, st, obs, sprob );
+            getsprobX( sites[0], param, st, obs, sprob );
         }
 
         for(int j=0; j < param.S; j++ ) {
@@ -298,12 +285,12 @@ int main(int argc, char *argv[]) {
         }
 
         logfile << "Starting forward algorithm..." << endl;;
-        forward2( sites, locs, param, emit, st, st2, obs, sprob, pswitch, fwd );
+        forward2( sites, locs, param, st, st2, obs, sprob, pswitch, fwd );
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
 
         logfile << "Starting backward algorithm..." << endl;
-        backward2( sites, locs, param, emit, st, st2, obs, sprob, pswitch, bwd, Pxb );
+        backward2( sites, locs, param, st, st2, obs, sprob, pswitch, bwd, Pxb );
         matfile << "backward" << endl;
         writeTmat( bwd, matfile );
 
@@ -317,9 +304,9 @@ int main(int argc, char *argv[]) {
         logfile << setprecision(20) << "Pxb= " << Pxb << endl;
         logfile << "diff= " << Pxa - Pxb << endl;
 
-        if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
-            cout << "Warning: P(x) diff=" << Pxa - Pxb << endl;
-        }
+        //if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
+            cout << "P(x) diff=" << Pxa - Pxb << endl;
+        //}
 
         logfile << "Starting posterior decoding..." << endl;
         vector<string> pppath2( sites.size() );
@@ -332,7 +319,7 @@ int main(int argc, char *argv[]) {
         logfile << "Starting Viterbi algorithm..." << endl;
         vector<string> vpath2( sites.size() );
         vector<double> vprob2( sites.size() , 0.0);
-        viterbi2( sites, locs, param, emit, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
+        viterbi2( sites, locs, param, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
 
         // output Viterbi path and probabilites:
         gcprob.resize( sites.size(), 0.0 );
