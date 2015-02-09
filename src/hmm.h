@@ -34,8 +34,8 @@ class hmmStates
 void generateStates(const hapDef &hapInfo, hmmStates &st );
 void generateXstates(const hapDef &hapInfo, hmmStates &st );
 
-void getXtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, double &trX );
-void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, double &trG );
+void getXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, double &trX );
+void getGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, double &trG );
 
 void getsprob( 
         const vector<int> &sites0, 
@@ -50,12 +50,12 @@ void getsprobX(
         const vector<int> &obs,
         vector<double> &sprob );
 
-double lookupXtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, vector<double> &trXbin );
-double lookupGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, vector<double> &trGbin );
+double lookupXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trXbin );
+double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin );
 
 void forward( 
         const vector<vector<int> > &sites,
-        const vector<int> &dvec,
+        const positions &pos,
         const parameters &p,
         const hmmStates &st,
         const vector<int> &obs,
@@ -63,7 +63,7 @@ void forward(
         vector<vector<double> > &fwd );
 void forward2( 
         const vector<vector<int> > &sites,
-        const vector<int> &dvec,
+        const positions &pos,
         const parameters &p,
         const hmmStates &st,
         const hmmStates &st2,
@@ -74,7 +74,7 @@ void forward2(
 
 void backward(
         const vector<vector<int> > &sites,
-        const vector<int> &dvec,
+        const positions &pos,
         const parameters &p,
         const hmmStates &st,
         const vector<int> &obs,
@@ -83,7 +83,7 @@ void backward(
         double &Pxb );
 void backward2(
         const vector<vector<int> > &sites,
-        const vector<int> &dvec,
+        const positions &pos,
         const parameters &p,
         const hmmStates &st,
         const hmmStates &st2,
@@ -110,7 +110,7 @@ void postDecode(
 
 void viterbi(
         const vector<vector<int> > &sites,
-        const vector<int> &dvec,
+        const positions &pos,
         const parameters &p,
         const hmmStates &st,
         const vector<int> &obs,
@@ -120,7 +120,7 @@ void viterbi(
         vector<double> &vprob );
 void viterbi2(
         const vector<vector<int> > &sites,
-        const vector<int> &dvec,
+        const positions &pos,
         const parameters &p,
         const hmmStates &st,
         const vector<int> &obs,

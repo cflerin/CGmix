@@ -70,9 +70,10 @@ int main(int argc, char *argv[]) {
     
     // set kb throughout:
     for(int i=0; i<pos.pos.size(); i++) {
-        pos.pos[i] = pos.pos[i] / 1000.0;
-        pos.cM[i] = pos.cM[i] / 1000.0;
-        //cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
+        cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
+        pos.pos[i] = pos.pos[i] / 1000.0;   // kb
+        //pos.rate[i] = pos.rate[i] / 1000.0; // cM/kb
+        pos.cM[i] = pos.cM[i] / 100.0;     // Morgans
     }
 
     // set/get/update parameters:
@@ -136,13 +137,13 @@ int main(int argc, char *argv[]) {
         getsprob( sites[0], param, st, obs, sprob );
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
-    forward( sites, locs, param, st, obs, sprob, fwd );
+    forward( sites, pos, param, st, obs, sprob, fwd );
     // printMat( fwd );
 
     double Pxa, Pxb;
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
-    backward( sites, locs, param, st, obs, sprob, bwd, Pxb );
+    backward( sites, pos, param, st, obs, sprob, bwd, Pxb );
     //
     //logSumExp( fwd[ fwd.size()-1 ], Pxa );
     Pxa = 0.0;
@@ -172,7 +173,7 @@ int main(int argc, char *argv[]) {
     vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
     vector<string> vpath( sites.size() );
     vector<double> vprob( sites.size() , 0.0);
-    viterbi( sites, locs, param, st, obs, sprob, vit, vpath, vprob );
+    viterbi( sites, pos, param, st, obs, sprob, vit, vpath, vprob );
     // printMat( vit );
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
@@ -216,7 +217,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
-            pathfile << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
+            pathfile << j << "\t" << pos.pos[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
         }
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
@@ -285,12 +286,12 @@ int main(int argc, char *argv[]) {
         }
 
         logfile << "Starting forward algorithm..." << endl;;
-        forward2( sites, locs, param, st, st2, obs, sprob, pswitch, fwd );
+        forward2( sites, pos, param, st, st2, obs, sprob, pswitch, fwd );
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
 
         logfile << "Starting backward algorithm..." << endl;
-        backward2( sites, locs, param, st, st2, obs, sprob, pswitch, bwd, Pxb );
+        backward2( sites, pos, param, st, st2, obs, sprob, pswitch, bwd, Pxb );
         matfile << "backward" << endl;
         writeTmat( bwd, matfile );
 
@@ -319,7 +320,7 @@ int main(int argc, char *argv[]) {
         logfile << "Starting Viterbi algorithm..." << endl;
         vector<string> vpath2( sites.size() );
         vector<double> vprob2( sites.size() , 0.0);
-        viterbi2( sites, locs, param, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
+        viterbi2( sites, pos, param, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
 
         // output Viterbi path and probabilites:
         gcprob.resize( sites.size(), 0.0 );
@@ -340,7 +341,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
-            pathfile << j << "\t" << locs[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t";
+            pathfile << j << "\t" << pos.pos[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t";
             pathfile << vpath2[j] << "\t" << exp(vprob2[j]) << "\t" << pppath2[j] << "\t" << ppprob2[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
         }
     } // end of 2nd pass
