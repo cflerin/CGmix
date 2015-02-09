@@ -34,20 +34,18 @@ class geneticMap
         geneticMap(){};
         ~geneticMap(){};
         vector<string> chr;
-        vector<int> pos;
-        vector<double> rate, cM;
+        vector<double> pos, rate, cM;
 };
 class positions 
 {
     public:
         positions(){};
         ~positions(){};
-        vector<int> pos;
-        vector<double> cM;
+        vector<double> pos, cM;
 };
 
 void readSites(const string &sitefname, vector<vector<int> > &sites );
-void readLocs(const string &locfname, vector<int> &locs );
+void readLocs(const string &locfname, vector<double> &locs );
 void readHapInfo(const string &fname, vector<vector<string> > &hapInfo );
 
 void print1Dvec(const vector<int> &vec);
@@ -56,7 +54,7 @@ void print2DvecString(const vector<vector<string> > &vec);
 void print1DvecString(const vector<string> &vec);
 
 void readGenMap(const string &fname, geneticMap &gMap );
-void interpGenMap(const geneticMap &gMap, const vector<int> &locs, positions &pos );
+void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions &pos );
 
 #endif
 

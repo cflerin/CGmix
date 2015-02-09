@@ -35,11 +35,11 @@ parameters::parameters(int argc, char *argv[]) {
     //rho2 = 900.0;
     //gam1 = 0.0;
     //gam2 = 0.0;
-    lam = 1.0/500;
+    lam = 1.0/500 * 1000; // tract length (kb)
+    //////
     theta1 = 0.0;
     theta2 = 0.0;
     //theta3 = 0.01;
-
     rho = 600.0;
     gam = 100.0;
     theta = 1.0/1000;

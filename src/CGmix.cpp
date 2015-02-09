@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     logfile << "Read " << sites[0].size() << " haplotypes with " << sites.size() << " sites" << endl;
     // print2Dvec( sites );
 
-    vector<int> locs;
+    vector<double> locs;
     readLocs( param.fname + ".locs", locs);
     logfile << "Read " << locs.size() << " physical positions" << endl;
     // print1Dvec( locs ); cout << endl;
@@ -74,6 +74,7 @@ int main(int argc, char *argv[]) {
         pos.pos[i] = pos.pos[i] / 1000.0;   // kb
         //pos.rate[i] = pos.rate[i] / 1000.0; // cM/kb
         pos.cM[i] = pos.cM[i] / 100.0;     // Morgans
+        cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
     }
 
     // set/get/update parameters:
@@ -89,10 +90,10 @@ int main(int argc, char *argv[]) {
     //param.gam1 = param.gam1 / param.n1;
     //param.gam2 = param.gam2 / param.n2;
     //////
-    param.rho = 1.0/100000;
-    param.gam = 1.0/10000;
-    param.lam = 1.0/500;
-    param.theta = 1.0/1000;
+    //param.rho = 1.0/100000;
+    //param.gam = 1.0/10000;
+    //param.lam = 1.0/500;
+    //param.theta = 1.0/1000;
     //////
 
     hmmStates st;

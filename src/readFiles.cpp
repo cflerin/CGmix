@@ -113,7 +113,7 @@ void readHapInfo(const string &fname, vector<vector<string> > &hapInfo ) {
         cout << "Failed to open haplotype info file: " << fname << endl;
 }
 
-void readLocs(const string &fname, vector<int> &locs ) {
+void readLocs(const string &fname, vector<double> &locs ) {
     ifstream file ( fname.c_str() );
     if (file.is_open()) {
         while (file.good()) {
@@ -125,7 +125,7 @@ void readLocs(const string &fname, vector<int> &locs ) {
             string field;
             while (getline(ss, field, '\t')) {
                 stringstream fs(field);
-                int f = 0;
+                double f = 0.0;
                 fs >> f;
                 locs.push_back(f);
             }
@@ -162,7 +162,6 @@ void readGenMap(const string &fname, geneticMap &gMap ) {
         // fill genMap values:
         string field;
         stringstream ss(out);
-        unsigned int tmpInt;
         double tmpDbl;
         unsigned int fieldCnt = 0;
         while( std::getline( ss, field, '\t' ) ) {
@@ -170,8 +169,8 @@ void readGenMap(const string &fname, geneticMap &gMap ) {
                 gMap.chr.push_back( field ); 
             }
             if( fieldCnt == 1 ) { 
-                istringstream( field ) >> tmpInt;
-                gMap.pos.push_back( tmpInt );
+                istringstream( field ) >> tmpDbl;
+                gMap.pos.push_back( tmpDbl );
             }
             if( fieldCnt == 2 ) { 
                 istringstream( field ) >> tmpDbl;
@@ -189,12 +188,11 @@ void readGenMap(const string &fname, geneticMap &gMap ) {
     gzclose( gzfile_in );
 }
 
-void interpGenMap(const geneticMap &gMap, const vector<int> &locs, positions &pos ) {
+void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions &pos ) {
     pos.pos.resize( locs.size() );
     pos.cM.resize( locs.size() );
     unsigned int jstart = 0;
-    unsigned int x;
-    int tmp;
+    double x, tmp;
     vector<int> flank(2), flankix(2);
     for(int i=0; i < locs.size(); i++ ) {
         x = locs[i];

@@ -93,7 +93,7 @@ void getXtrans(const int &to, const int &from, const double &d, const double &r,
             // cout << " hap sw! ";
             // trX = exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
             //       ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
-            trX = exp( -r * p.T ) * ( 1.0 - exp( -r * p.rho ) ) / nm + 
+            trX = exp( -r * p.T ) * ( 1.0 - exp( -r * rho ) ) / nm + 
                   ( 1.0 - exp( -r * p.T )) * u / nm ;
         }
         if( st.Xhap[from] == st.Xhap[to] ) { // no hap switch
@@ -101,29 +101,31 @@ void getXtrans(const int &to, const int &from, const double &d, const double &r,
             // trX = exp( -d * p.rho * p.T ) * exp( -d * p.rho ) + 
             //       exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
             //       ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
-            trX = exp( -r * p.T ) * exp( -r * p.rho ) + 
-                  exp( -r * p.T ) * ( 1.0 - exp( -r * p.rho ) ) / nm + 
+            trX = exp( -r * p.T ) * exp( -r * rho ) + 
+                  exp( -r * p.T ) * ( 1.0 - exp( -r * rho ) ) / nm + 
                   ( 1.0 - exp( -r * p.T )) * u / nm ;
         }
     }
     trX = log(trX);
 }
 
-void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st, const parameters &p, double &trG ) {
-    double u, a1, a2, a3, a4, a5;
+void getGtrans(const int &to, const int &from, const double &d, double &r, const hmmStates &st, const parameters &p, double &trG ) {
+    double u, a1, a2, a3, a4, a5, gam;
     int nm;
     if( st.Gpop[to] == 1 ) {
         u = p.u1;
         nm = p.n1;
+        gam = p.f * ( 4.0 * p.Ne1 * (r/d) );
     }
     if( st.Gpop[to] == 2 ) {
         u = 1.0 - p.u1;
         nm = p.n2;
+        gam = p.f * ( 4.0 * p.Ne1 * (r/d) );
     }
     // 4 //
     if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] != 0 ) ) {
         // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-p.gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + p.gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
+        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
         // 4: Pr(G[j+1]=g | G[j] = g):
         a4 = exp( -p.lam * d ) + a5 ;
         trG = a4;     
@@ -131,29 +133,29 @@ void getGtrans(const int &to, const int &from, const int &d, const hmmStates &st
     // 1 //
     if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] == 0 ) ) {
         // 3: Pr(G[j+1]=0 | G[j] = g):
-        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (p.gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (p.gam * p.T + p.lam * (p.n1 + p.n2) ) ;
+        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (gam * p.T + p.lam * (p.n1 + p.n2) ) ;
         // 1: Pr(G[j+1]=0 | G[j] = 0):
-        a1 = exp( -p.lam * d ) * exp( -p.gam * p.T * d / (p.n1 + p.n2)) + a3 ;
+        a1 = exp( -p.lam * d ) * exp( -gam * p.T * d / (p.n1 + p.n2)) + a3 ;
         trG = a1;
     }
     // 2 //
     if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] != 0 ) ) {
         // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-p.gam * p.T / (p.n1 + p.n2) - p.lam)) - 1)) / ((p.n1 + p.n2) * nm * p.lam + p.gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
+        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
         // 2: Pr(G[j+1]=g | G[j] = 0):
-        a2 = exp( -p.lam * d ) * ( 1.0 - exp( -p.gam * p.T * d / (p.n1 + p.n2))) * u / nm + a5 ;
+        a2 = exp( -p.lam * d ) * ( 1.0 - exp( -gam * p.T * d / (p.n1 + p.n2))) * u / nm + a5 ;
         trG = a2;
     }
     // 3 //
     if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) ) {
         // 3: Pr(G[j+1]=0 | G[j] = g):
-        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (p.gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (p.gam * p.T + p.lam * (p.n1 + p.n2) ) ;
+        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (gam * p.T + p.lam * (p.n1 + p.n2) ) ;
         trG = a3;
     }
     // 5 //
     if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] != 0 ) && ( st.Ghap[from] != st.Ghap[to] ) ) {
         // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-p.gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + p.gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
+        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
         trG = a5;
     }
     trG = log(trG);
@@ -249,7 +251,7 @@ double lookupGtrans(const int &to, const int &from, const double &d, const doubl
     //cout << " from" << st.Ghap[from] << " to" << st.Ghap[to];
     //cout << " type" << type << " ";
     if( trGbin[ type ] == 99 ) { // this transition hasn't been set yet:
-        getGtrans( to, from, d, st, p, trG);
+        getGtrans( to, from, d, r, st, p, trG);
         trGbin[ type ] = trG;
         return( trG );
     } else { // lookup and return a value already seen:
@@ -307,6 +309,7 @@ void forward(
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
+        cout << "j=" << j << "\td=" << d << "\tr=" << r << endl;
         cout <<
             "trXbinP1=" << exp(trXbin[2]) + exp(trXbin[1])*(p.n1-1) + exp(trXbin[3])*(p.n2) << 
             "\ttrXbinP2=" << exp(trXbin[5]) + exp(trXbin[4])*(p.n2-1) + exp(trXbin[0])*(p.n2) << 
