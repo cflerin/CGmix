@@ -8,7 +8,7 @@
 #include "readFiles.h"
 
 /*
-void print1Dvec(const vector<double>& vec) {
+void print1Dvec(const vector<double> &vec) {
     for (vector<double>::const_iterator iter = vec.begin();
         iter != vec.end(); ++iter) {
         cout << *iter << " ";
@@ -16,14 +16,14 @@ void print1Dvec(const vector<double>& vec) {
 }
 */
 
-void print1Dvec(const vector<int>& vec) {
+void print1Dvec(const vector<int> &vec) {
     for (vector<int>::const_iterator iter = vec.begin();
         iter != vec.end(); ++iter) {
         cout << *iter << " ";
     }
 }
 
-void print2Dvec(const vector<vector<int> >& vec) {
+void print2Dvec(const vector<vector<int> > &vec) {
 for(int i=0; i < vec[0].size(); i++) {
       for (int j=0; j < vec.size(); j++)
         cout << vec[j][i] << " "; 
@@ -31,7 +31,7 @@ for(int i=0; i < vec[0].size(); i++) {
    }
 }
 
-void print2DvecString(const vector<vector<string> >& vec) {
+void print2DvecString(const vector<vector<string> > &vec) {
 for(int i=0; i < vec.size(); i++) {
       for (int j=0; j < vec[i].size(); j++)
         cout << vec[i][j] << " "; 
@@ -39,7 +39,7 @@ for(int i=0; i < vec.size(); i++) {
    }
 }
 
-void print1DvecString(const vector<string>& vec) {
+void print1DvecString(const vector<string> &vec) {
     for (vector<string>::const_iterator iter = vec.begin();
         iter != vec.end(); ++iter) {
         cout << *iter << " ";

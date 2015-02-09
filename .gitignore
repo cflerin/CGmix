@@ -1,13 +1,12 @@
 CGmix
 *.d
 *.o
-admixSampleData*
 *swp
-old/
 distributions.R
 *test*
-*out
 *hapnames
 *sites
 *locs
+results/
+*vim
 
