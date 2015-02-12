@@ -35,14 +35,14 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
     }
     // state concatenation:
     nrow = st.Xhap.size();
-    //cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates" << endl;
+    cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates" << endl;
     for(int i=0; i < nrow; i++) {
         string tmp;
         tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]) + "-" + std::to_string(st.Gpop[i]) + "-" + std::to_string(st.Ghap[i]);
         //tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
         st.states.push_back( tmp );
-        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
-        //     st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
+        cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
+             st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
     }
 }
 
@@ -107,58 +107,6 @@ void getXtrans(const int &to, const int &from, const double &d, const double &r,
         }
     }
     trX = log(trX);
-}
-
-void getGtrans(const int &to, const int &from, const double &d, double &r, const hmmStates &st, const parameters &p, double &trG ) {
-    double u, a1, a2, a3, a4, a5, gam;
-    int nm;
-    if( st.Gpop[to] == 1 ) {
-        u = p.u1;
-        nm = p.n1;
-        gam = p.f * ( 4.0 * p.Ne1 * (r/d) );
-    }
-    if( st.Gpop[to] == 2 ) {
-        u = 1.0 - p.u1;
-        nm = p.n2;
-        gam = p.f * ( 4.0 * p.Ne1 * (r/d) );
-    }
-    // 4 //
-    if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] != 0 ) ) {
-        // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
-        // 4: Pr(G[j+1]=g | G[j] = g):
-        a4 = exp( -p.lam * d ) + a5 ;
-        trG = a4;     
-    }
-    // 1 //
-    if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] == 0 ) ) {
-        // 3: Pr(G[j+1]=0 | G[j] = g):
-        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (gam * p.T + p.lam * (p.n1 + p.n2) ) ;
-        // 1: Pr(G[j+1]=0 | G[j] = 0):
-        a1 = exp( -p.lam * d ) * exp( -gam * p.T * d / (p.n1 + p.n2)) + a3 ;
-        trG = a1;
-    }
-    // 2 //
-    if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] != 0 ) ) {
-        // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
-        // 2: Pr(G[j+1]=g | G[j] = 0):
-        a2 = exp( -p.lam * d ) * ( 1.0 - exp( -gam * p.T * d / (p.n1 + p.n2))) * u / nm + a5 ;
-        trG = a2;
-    }
-    // 3 //
-    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) ) {
-        // 3: Pr(G[j+1]=0 | G[j] = g):
-        a3 = p.lam * (p.n1 + p.n2) * ( 1.0 - exp( -d * (gam * p.T + p.lam * (p.n1 + p.n2) ) / (p.n1 + p.n2) ) ) / (gam * p.T + p.lam * (p.n1 + p.n2) ) ;
-        trG = a3;
-    }
-    // 5 //
-    if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] != 0 ) && ( st.Ghap[from] != st.Ghap[to] ) ) {
-        // 5: Pr(G[j+1]=g' | G[j] = g):
-        a5 = ( p.lam * u * (p.n1 + p.n2) * ( exp( d*(-gam * p.T / (p.n1 + p.n2) - p.lam)) - 1.0)) / ((p.n1 + p.n2) * nm * p.lam + gam * p.T * nm) + (u - u * exp(-d * p.lam)) / nm ;
-        trG = a5;
-    }
-    trG = log(trG);
 }
 
 void getsprob( 
@@ -234,12 +182,57 @@ double lookupXtrans(const int &to, const int &from, const double &d, const doubl
 }
 
 double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin ) {
+    // first pass at this site: calculate all reusable values:
+    if( trGbin[10] == 99 ) {
+        double int1, int2p1, int2p2, gam1, gam2, tmp;
+        gam1 = p.f * ( 4.0 * p.Ne1 * (r/d) );
+        gam2 = p.f * ( 4.0 * p.Ne2 * (r/d) );
+        //
+        int1 = ( ( 1.0 - exp( -d * (p.lam+(gam1/p.n1+gam2/p.n2)*r*p.T))) * p.lam*p.n1*p.n2 ) / ( p.lam*p.n1*p.n2 + (gam2*p.n1+gam1*p.n2)*r*p.T );
+        int2p1 = ( ( -1.0 + exp( -d * (p.lam+(gam1/p.n1+gam2/p.n2)*r*p.T))) * p.lam*p.n2*p.u1 ) /
+                 ( p.lam*p.n1*p.n2 + (gam2*p.n1+gam1*p.n2)*r*p.T ) +
+                 ( p.u1 - exp( -p.lam * d ) * p.u1 ) / p.n1;
+        int2p2 = ( ( -1.0 + exp( -d * (p.lam+(gam1/p.n1+gam2/p.n2)*r*p.T))) * p.lam*p.n1*p.u2 ) /
+                 ( p.lam*p.n1*p.n2 + (gam2*p.n1+gam1*p.n2)*r*p.T ) +
+                 ( p.u2 - exp( -p.lam * d ) * p.u2 ) / p.n2;
+        // 0 //
+        tmp = log( exp( -p.lam * d ) * exp( -r * d * p.T * (gam1/p.n1 + gam2/p.n2) ) + int1 );
+        trGbin[0] = tmp;
+        trGbin[5] = tmp;
+        // 1 //
+        trGbin[1] = log( exp( -p.lam * d ) * ( 1 - exp( -r * d * p.T * (gam1/p.n1 + gam2/p.n2))) * p.u1/p.n1 + int2p1 );
+        // 2 //
+        tmp = log( int1 );
+        trGbin[2] = tmp;
+        trGbin[7] = tmp;
+        // 3 //
+        trGbin[3] = log( exp( -p.lam * d ) + int2p1 );
+        // 4 //
+        trGbin[4] = log( int2p1 );
+        /////// population 2:
+        // 5 //
+        // 6 //
+        trGbin[6] = log( exp( -p.lam * d ) * ( 1 - exp( -r * d * p.T * (gam1/p.n1 + gam2/p.n2))) * p.u2/p.n2 + int2p2 );
+        // 7 //
+        // 8 //
+        trGbin[8] = log( exp( -p.lam * d ) + int2p2 );
+        // 9 //
+        trGbin[9] = log( int2p2 );
+        /////// flag:
+        trGbin[10] = 1.0;
+        // prob sums check:
+        // for(int z=0; z<trGbin.size(); z++) { cout << exp(trGbin[z]) << endl; }
+        // cout << "trGbinsum0=" << exp(trGbin[0]) + exp(trGbin[1])*p.n1 + exp(trGbin[6])*p.n2 << endl;
+        // cout << "trGbinsum1=" << exp(trGbin[2]) + exp(trGbin[3]) + exp(trGbin[4])*(p.n1-1) + exp(trGbin[9])*(p.n2) << endl;
+        // cout << "trGbinsum2=" << exp(trGbin[2]) + exp(trGbin[8]) + exp(trGbin[9])*(p.n2-1) + exp(trGbin[4])*(p.n1) << endl;
+    }
+    // return a pre-calculated value:
     double trG;
     int type;
     if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] != 0 ) )
         type = 3;
     else if( ( st.Ghap[from] == st.Ghap[to] ) && ( st.Ghap[from] == 0 ) )
-        type = 0; // overwrites above
+        type = 0;
     else if( ( st.Ghap[from] == 0 ) && ( st.Ghap[to] != 0 ) )
         type = 1;
     else if( ( st.Ghap[from] != 0 ) && ( st.Ghap[to] == 0 ) )
@@ -251,13 +244,15 @@ double lookupGtrans(const int &to, const int &from, const double &d, const doubl
     //cout << " from" << st.Ghap[from] << " to" << st.Ghap[to];
     //cout << " type" << type << " ";
     if( trGbin[ type ] == 99 ) { // this transition hasn't been set yet:
-        getGtrans( to, from, d, r, st, p, trG);
-        trGbin[ type ] = trG;
-        return( trG );
-    } else { // lookup and return a value already seen:
-        trG = trGbin[ type ];
-        return( trG );
+        // this should never happen
+        cout << "Type 99!" << endl;
+        //getGtrans( to, from, d, r, st, p, trG);
+        //trGbin[ type ] = trG;
+        //return( trG );
     }
+    // lookup and return a value already seen:
+    trG = trGbin[ type ];
+    return( trG );
 }
 
 void forward( 
@@ -270,7 +265,7 @@ void forward(
         vector<vector<double> > &fwd ) {
     double lsum, trX, trG, e, d, r;
     vector<double> trXbin(6,99);
-    vector<double> trGbin(10,99);
+    vector<double> trGbin(11,99);
     vector<int> siteIndx;
     vector<double> tmp( st.states.size() );
     if( p.mode == 1 ) { // full model
@@ -309,17 +304,6 @@ void forward(
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
-        cout << "j=" << j << "\td=" << d << "\tr=" << r << endl;
-        cout <<
-            "trXbinP1=" << exp(trXbin[2]) + exp(trXbin[1])*(p.n1-1) + exp(trXbin[3])*(p.n2) << 
-            "\ttrXbinP2=" << exp(trXbin[5]) + exp(trXbin[4])*(p.n2-1) + exp(trXbin[0])*(p.n2) << 
-            endl;
-        cout << 
-            "trGbinG0=" << exp(trGbin[0]) + exp(trGbin[1])*p.n1 + exp(trGbin[6])*p.n2 <<
-            "\ttrGbinP1=" << exp(trGbin[2]) + exp(trGbin[3]) + exp(trGbin[4])*(p.n1-1) + exp(trGbin[9])*(p.n2-1) <<
-            "\ttrGbinP2=" << exp(trGbin[2]) + exp(trGbin[8]) + exp(trGbin[9])*(p.n2-1) + exp(trGbin[4])*(p.n1-1) <<
-            endl;
-
         std::fill( trXbin.begin(), trXbin.end(), 99 );
         std::fill( trGbin.begin(), trGbin.end(), 99 );
     } // end j site loop
@@ -339,7 +323,7 @@ void forward2(
     fwd[0] = sprob;
     double lsum, trX, trG, e, d, r;
     vector<double> trXbin(6,99);
-    vector<double> trGbin(10,99);
+    vector<double> trGbin(11,99);
     vector<int> siteIndx;
     vector<double> tmp;
     //cout << "pswitch"<<pswitch.size() << endl;
@@ -397,7 +381,7 @@ void backward(
     // double negInf = - std::numeric_limits<double>::infinity();
     // double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(6,99);
-    vector<double> trGbin(10,99);
+    vector<double> trGbin(11,99);
     vector<int> siteIndx;
     vector<double> tmp( st.states.size() );
     if( p.mode == 1 ) { // full model
@@ -466,7 +450,7 @@ void backward2(
     double negInf = - std::numeric_limits<double>::infinity();
     double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(6,99);
-    vector<double> trGbin(10,99);
+    vector<double> trGbin(11,99);
     vector<int> siteIndx;
     vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
@@ -637,7 +621,7 @@ void viterbi(
     double trX, trG, vmax, tmp, e, d, r;
     double negInf = - std::numeric_limits<double>::infinity();
     vector<double> trXbin(6,99);
-    vector<double> trGbin(10,99);
+    vector<double> trGbin(11,99);
     vector<int> siteIndx;
     if( p.mode == 1 ) {
         siteIndx = st.Gindx;
@@ -734,7 +718,7 @@ void viterbi2(
     double negInf = - std::numeric_limits<double>::infinity();
     double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(6,99);
-    vector<double> trGbin(10,99);
+    vector<double> trGbin(11,99);
     vector<int> siteIndx;
     for(int j=1; j < sites.size() ; j++ ) {
         //d = dvec[j] - dvec[j-1];

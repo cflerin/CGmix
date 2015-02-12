@@ -85,6 +85,7 @@ int main(int argc, char *argv[]) {
             param.n2 += 1;
     }
     param.S = locs.size() ;
+    param.u2 = 1.0 - param.u1;
     //param.rho1 = param.rho1 / param.n1;
     //param.rho2 = param.rho2 / param.n2;
     //param.gam1 = param.gam1 / param.n1;

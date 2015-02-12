@@ -35,7 +35,6 @@ void generateStates(const hapDef &hapInfo, hmmStates &st );
 void generateXstates(const hapDef &hapInfo, hmmStates &st );
 
 void getXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, double &trX );
-void getGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, double &trG );
 
 void getsprob( 
         const vector<int> &sites0, 

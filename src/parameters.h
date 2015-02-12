@@ -33,6 +33,7 @@ class parameters
         int S;          // determined
         double T;
         double u1;
+        double u2;
         double Ne1;
         double Ne2;
         double f;
