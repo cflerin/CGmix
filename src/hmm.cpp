@@ -35,14 +35,14 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
     }
     // state concatenation:
     nrow = st.Xhap.size();
-    cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates" << endl;
+    //cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates" << endl;
     for(int i=0; i < nrow; i++) {
         string tmp;
         tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]) + "-" + std::to_string(st.Gpop[i]) + "-" + std::to_string(st.Ghap[i]);
         //tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
         st.states.push_back( tmp );
-        cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
-             st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
+        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
+        //     st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
     }
 }
 
@@ -354,11 +354,11 @@ void forward2(
                 }
             } // end 'from' loop
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
+                if( st2.Xpop[t] == 1 ) { e = p.theta1_match; }
+                else if( st2.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                else if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             logSumExp( tmp, lsum );
             fwd[j][t] = e + lsum;
@@ -470,11 +470,11 @@ void backward2(
                 //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
                 trX = lookupXtrans( t, f, d, r, st2, p, trXbin);
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                    else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
+                    if( st2.Xpop[t] == 1 ) { e = p.theta1_match; }
+                    else if( st2.Xpop[t] == 2 ) { e = p.theta2_match; }
                 } else {
-                    if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                    else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                    if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                    else if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
                 }
                 if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
@@ -725,9 +725,9 @@ void viterbi2(
         d = pos.pos[j] - pos.pos[j-1];
         r = pos.cM[j] - pos.cM[j-1];
         if( pswitch[j] == 0 ) { // choose sites to match for emission
-            siteIndx = st.Gindx;
-        } else {
             siteIndx = st.Xindx;
+        } else {
+            siteIndx = st.Gindx;
         }
         for(int t=0; t < vit[j].size(); t++ ) {
             vmax = negInf;
@@ -778,7 +778,8 @@ void viterbi2(
         vmax = negInf;
         for(int f=0; f < vit[j].size(); f++) {
             trX = lookupXtrans( t, f, d, r, st, p, trXbin);
-            if( pswitch[j] == 1 ) {
+            //if( pswitch[j] == 1 ) {
+            if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                 trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
             } else {

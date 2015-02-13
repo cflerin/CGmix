@@ -49,9 +49,9 @@ class parameters
         double theta2_match;    // determined
         double theta2_mismatch; // determined
 
-        double rho;
-        double gam;
-        double theta;
+        // double rho;
+        // double gam;
+        // double theta;
 
         parameters(int argc, char *argv[]);
         ~parameters(){};

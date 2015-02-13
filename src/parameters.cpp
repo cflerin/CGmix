@@ -31,18 +31,10 @@ parameters::parameters(int argc, char *argv[]) {
     Ne1 = 10000;
     Ne2 = 18000;
     f = 10.0; // scaling factor for g ( f=gamma/rho, g=f*r, and gamma=4*Ne*g )
-    //rho1 = 600.0;
-    //rho2 = 900.0;
-    //gam1 = 0.0;
-    //gam2 = 0.0;
     lam = 1.0/500 * 1000; // tract length (kb)
     //////
     theta1 = 0.0;
     theta2 = 0.0;
-    //theta3 = 0.01;
-    rho = 600.0;
-    gam = 100.0;
-    theta = 1.0/1000;
 }
 
 string parameters::get_arg(unsigned int i) {
@@ -77,9 +69,9 @@ void parameters::read_parameters() {
         else if (in_str == "--theta2") { theta2 = atof( get_arg(i+1).c_str() ); i++; }
         //else if (in_str == "--theta3") { theta3 = atof( get_arg(i+1).c_str() ); i++; }
         //////
-        else if (in_str == "--rho") { rho = atof( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--gam") { gam = atof( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--theta") { theta = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--rho") { rho = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--gam") { gam = atof( get_arg(i+1).c_str() ); i++; }
+        //else if (in_str == "--theta") { theta = atof( get_arg(i+1).c_str() ); i++; }
         //////
 
         else
@@ -125,9 +117,9 @@ void parameters::print_params(ofstream &logfile, const int which) {
         logfile << "theta2 = " << theta2 << endl;
         //logfile << "theta3 = " << theta3 << endl;
         //
-        logfile << "rho = " << rho << endl;
-        logfile << "gamma = " << gam << endl;
-        logfile << "theta = " << theta << endl;
+        //logfile << "rho = " << rho << endl;
+        //logfile << "gamma = " << gam << endl;
+        //logfile << "theta = " << theta << endl;
     }
 
 

@@ -70,11 +70,11 @@ int main(int argc, char *argv[]) {
     
     // set kb throughout:
     for(int i=0; i<pos.pos.size(); i++) {
-        cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
+        //cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
         pos.pos[i] = pos.pos[i] / 1000.0;   // kb
         //pos.rate[i] = pos.rate[i] / 1000.0; // cM/kb
         pos.cM[i] = pos.cM[i] / 100.0;     // Morgans
-        cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
+        //cout << setprecision(20) << pos.pos[i] << "\t" << pos.cM[i] << endl;
     }
 
     // set/get/update parameters:
@@ -86,21 +86,10 @@ int main(int argc, char *argv[]) {
     }
     param.S = locs.size() ;
     param.u2 = 1.0 - param.u1;
-    //param.rho1 = param.rho1 / param.n1;
-    //param.rho2 = param.rho2 / param.n2;
-    //param.gam1 = param.gam1 / param.n1;
-    //param.gam2 = param.gam2 / param.n2;
-    //////
-    //param.rho = 1.0/100000;
-    //param.gam = 1.0/10000;
-    //param.lam = 1.0/500;
-    //param.theta = 1.0/1000;
-    //////
 
     hmmStates st;
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         generateXstates( hapInfo, st );
-        param.theta = numeric_limits<double>::epsilon(); //1.0/100000;
         // set theta to ~0 for reduced first pass:
         param.theta1 = numeric_limits<double>::epsilon();
         param.theta2 = numeric_limits<double>::epsilon();
@@ -200,14 +189,47 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    logfile << "Starting path output" << endl;
     vector<double> gcprob( sites.size(), 0.0 );
     vector<double> gcprobPop1( sites.size(), 0.0 );
     vector<double> gcprobPop2( sites.size(), 0.0 );
+    vector<double> gcprobXPop( sites.size(), 0.0 );
+    vector<double> transPGC( sites.size(), 0.0 );
+    vector<double> transPGCnorm( sites.size(), 0.0 );
+    int intpos;
+    double pXi, pGk;
     if( ( param.mode == 0 ) || ( param.mode == 1 ) ) {
+        logfile << "Starting path output" << endl;
+        // calculate total probability of a cross-population gene conversion:
+        vector<double> transPGC( sites.size(), 0.0 );
+        for(int j=0; j < pprob.size(); j++ ) {
+            for(int i=0; i < pprob[j].size(); i++ ) {
+                if( st.Ghap[i] == 0 ) { continue; }
+                if( st.Xpop[i] == 1 ) {
+                    pXi = pprob[j][i];
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st.Gpop[k] == 2 ) {
+                            pGk = pprob[j][k];
+                            transPGC[j] += pXi * pGk;
+                        }
+                    }
+                }
+            }
+            for(int i=0; i < pprob[j].size(); i++ ) {
+                if( st.Ghap[i] == 0 ) { continue; }
+                if( st.Xpop[i] == 2 ) {
+                    pXi = pprob[j][i];
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st.Gpop[k] == 1 ) {
+                            pGk = pprob[j][k];
+                            transPGC[j] += pXi * pGk;
+                        }
+                    }
+                }
+            }
+        }
         // output Viterbi path and probabilites:
         double csum;
-        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCprob\tGCprobP1\tGCprobP2" << endl;
+        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop" << endl;
         for(int j=0; j < pprob.size(); j++ ) {
             for(int i=0; i < pprob[j].size(); i++ ) {
                 if( st.Ghap[i] != 0 ) { // gene conversion state
@@ -217,9 +239,15 @@ int main(int argc, char *argv[]) {
                     } else if( st.Gpop[i] == 2 ) {
                         gcprobPop2[j] += pprob[j][i];
                     }
+                    if( ( st.Xpop[i]==1 && st.Gpop[i]==2 ) || ( st.Xpop[i]==2 && st.Gpop[i]==1 ) ) {
+                        // cross-population gene conversion
+                        gcprobXPop[j] += pprob[j][i];
+                    }
+                    //if( ( st.Xpop[i]==1 && st.Gpop[i]==2 ) )
                 }
             }
-            pathfile << j << "\t" << pos.pos[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
+            intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
+            pathfile << j << "\t" << intpos << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << "\t" << gcprobXPop[j] << "\t" << transPGC[j] << endl;
         }
         matfile << "forward" << endl;
         writeTmat( fwd, matfile );
@@ -243,8 +271,7 @@ int main(int argc, char *argv[]) {
     if( param.mode == 2 ) {
         logfile.precision (ss);
         logfile << endl << "Restart hmm" << endl;
-        param.theta = 1.0/1000;
-        // set theta to a reasonable number for full model:
+        // set theta to for full model:
         param.theta1 = 0.2 / ( 0.2 + param.n1 );
         param.theta2 = 0.2 / ( 0.2 + param.n2 );
 
@@ -324,6 +351,7 @@ int main(int argc, char *argv[]) {
         vector<double> vprob2( sites.size() , 0.0);
         viterbi2( sites, pos, param, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
 
+        logfile << "Starting path output" << endl;
         // output Viterbi path and probabilites:
         gcprob.resize( sites.size(), 0.0 );
         std::fill( gcprob.begin(), gcprob.end(), 0.0 );
@@ -331,7 +359,49 @@ int main(int argc, char *argv[]) {
         std::fill( gcprobPop1.begin(), gcprobPop1.end(), 0.0 );
         gcprobPop2.resize( sites.size(), 0.0 );
         std::fill( gcprobPop2.begin(), gcprobPop2.end(), 0.0 );
-        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tVpath2\tVpathProb2\tPpath2\tPpathProb2\tGCprob\tGCprobP1\tGCprobP2" << endl;
+        int intpos;
+        //
+        // calculate total probability of a cross-population gene conversion:
+        std::fill( transPGC.begin(), transPGC.end(), 0.0 );
+        std::fill( transPGCnorm.begin(), transPGCnorm.end(), 0.0 );
+        double withinPGC, noGC;
+        for(int j=0; j < pprob.size(); j++ ) {
+            withinPGC = noGC = 0.0;
+            for(int i=0; i < pprob[j].size(); i++ ) {
+                //if( st2.Ghap[i] == 0 ) { continue; }
+                if( st2.Xpop[i] == 1 ) {
+                    pXi = pprob[j][i];
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st2.Gpop[k] == 2 ) {
+                            pGk = pprob[j][k];
+                            transPGC[j] += pXi * pGk;
+                            //cout << "i=" << i << "\tk=" << k << "\tpXi=" << pXi << "\tpGk=" << pGk << endl;
+                        } else if( st2.Gpop[k] == 1 ) {
+                            withinPGC += pXi * pprob[j][k];
+                        } // else if( st2.Gpop[k] == 0 ) { noGC += pXi * pprob[j][k]; }
+                    }
+                }
+            }
+            for(int i=0; i < pprob[j].size(); i++ ) {
+                //if( st2.Ghap[i] == 0 ) { continue; }
+                if( st2.Xpop[i] == 2 ) {
+                    pXi = pprob[j][i];
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st2.Gpop[k] == 1 ) {
+                            pGk = pprob[j][k];
+                            transPGC[j] += pXi * pGk;
+                        } else if( st2.Gpop[k] == 2 ) {
+                            withinPGC += pXi * pprob[j][k];
+                        } // else if( st2.Gpop[k] == 0 ) { noGC += pXi * pprob[j][k]; }
+                    }
+                }
+            }
+            cout << transPGC[j] << "\t" << withinPGC << "\t" << noGC << endl;
+            cout << "sum=" << transPGC[j]+withinPGC+noGC << endl;
+            transPGCnorm[j] = transPGC[j] / ( transPGC[j] + withinPGC );
+        }
+        //
+        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tVpath2\tVpathProb2\tPpath2\tPpathProb2\tGCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop\tGCprobXPopnorm" << endl;
         for(int j=0; j < pprob.size(); j++ ) {
             for(int i=0; i < pprob[j].size(); i++ ) {
                 if( st2.Ghap[i] != 0 ) { // gene conversion state
@@ -341,10 +411,15 @@ int main(int argc, char *argv[]) {
                     } else if( st2.Gpop[i] == 2 ) {
                         gcprobPop2[j] += pprob[j][i];
                     }
+                    if( ( st2.Xpop[i]==1 && st2.Gpop[i]==2 ) || ( st2.Xpop[i]==2 && st2.Gpop[i]==1 ) ) {
+                        // cross-population gene conversion
+                        gcprobXPop[j] += pprob[j][i];
+                    }
                 }
             }
-            pathfile << j << "\t" << pos.pos[j] << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t";
-            pathfile << vpath2[j] << "\t" << exp(vprob2[j]) << "\t" << pppath2[j] << "\t" << ppprob2[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << endl;
+            intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
+            pathfile << j << "\t" << intpos << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t";
+            pathfile << vpath2[j] << "\t" << exp(vprob2[j]) << "\t" << pppath2[j] << "\t" << ppprob2[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << "\t" << gcprobXPop[j] << "\t" << transPGC[j] << "\t" << transPGCnorm[j] << endl;
         }
     } // end of 2nd pass
 
