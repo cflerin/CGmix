@@ -35,6 +35,8 @@ parameters::parameters(int argc, char *argv[]) {
     //////
     theta1 = 0.0;
     theta2 = 0.0;
+    fixPswitch = -1;
+    highAccuracy = 1;
 }
 
 string parameters::get_arg(unsigned int i) {
@@ -67,6 +69,8 @@ void parameters::read_parameters() {
         else if (in_str == "--lam") { lam = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta1") { theta1 = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta2") { theta2 = atof( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--fixPswitch") { fixPswitch = atoi( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--highAccuracy") { highAccuracy = atoi( get_arg(i+1).c_str() ); i++; }
         //else if (in_str == "--theta3") { theta3 = atof( get_arg(i+1).c_str() ); i++; }
         //////
         //else if (in_str == "--rho") { rho = atof( get_arg(i+1).c_str() ); i++; }

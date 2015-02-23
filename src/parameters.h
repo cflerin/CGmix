@@ -48,7 +48,9 @@ class parameters
         double theta1_mismatch; // determined
         double theta2_match;    // determined
         double theta2_mismatch; // determined
+        int highAccuracy; // whether to use sort in logSumExp (1) or not (0)
 
+        int fixPswitch;
         // double rho;
         // double gam;
         // double theta;

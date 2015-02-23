@@ -58,13 +58,13 @@ void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
     }
     // state concatenation:
     nrow = st.Xhap.size();
-    //cout << "i\tXhap\tXpop\tXindx\tstates" << endl;
+    //cout << "i\tXhap\tXpop\tXindx\tGhap\tstates" << endl;
     for(int i=0; i < nrow; i++) {
         string tmp;
         tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]);
         st.states.push_back( tmp );
         //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.states[i] << endl;
-        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.Ghap[i] << st.states[i] << endl;
+        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.Ghap[i] << "\t" << st.states[i] << endl;
     }
 }
 
@@ -300,7 +300,7 @@ void forward(
                 if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
                 else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
-            logSumExp( tmp, lsum );
+            logSumExp( tmp, lsum, p.highAccuracy );
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
@@ -360,7 +360,7 @@ void forward2(
                 if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
                 else if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
-            logSumExp( tmp, lsum );
+            logSumExp( tmp, lsum, p.highAccuracy );
             fwd[j][t] = e + lsum;
         } // end 'to' loop
         std::fill( trXbin.begin(), trXbin.end(), 99 );
@@ -415,7 +415,7 @@ void backward(
                 }
                 //cout << endl;
             } // t loop
-            logSumExp( tmp, lsum );
+            logSumExp( tmp, lsum, p.highAccuracy );
             //cout << "j= " << j << "\tf= " << f << "\tlsum= " << lsum << endl << endl;
             bwd[j][f] = lsum;
         } // f loop
@@ -485,7 +485,7 @@ void backward2(
                     tmp[t] = bwd[j+1][t] + trX + e ;
                 }
             } // t loop
-            logSumExp( tmp, lsum );
+            logSumExp( tmp, lsum, p.highAccuracy );
             bwd[j][f] = lsum;
         } // f loop
         std::fill( trXbin.begin(), trXbin.end(), 99 );
@@ -531,21 +531,28 @@ void writeTmat( const vector<vector<double> > &mat, ofstream &matfile ) {
     }
 }
 
-void logSumExp( const vector<double> &vec, double &lse ) {
-    double max = - std::numeric_limits<double>::max();
-    for(int i=0; i < vec.size(); i++ ) {
-        if( vec[i] > max )
-            max = vec[i];
+void logSumExp( const vector<double> &vec, double &lse, const int &hp ) {
+    if( hp == 1 ) {
+        double sum = 0.0;
+        vector<double> vec2(vec);
+        sort(vec2.begin(), vec2.end());
+        double max = vec2.back();
+        for(int i=0; i < vec2.size(); i++ ) {
+            sum += exp( vec2[i] - max );
+        }
+        lse = max + log(sum) ;
+    } else {
+        double max = - std::numeric_limits<double>::max();
+        for(int i=0; i < vec.size(); i++ ) {
+            if( vec[i] > max )
+                max = vec[i];
+        }
+        double sum = 0.0;
+        for(int i=0; i < vec.size(); i++ ) {
+            sum += exp( vec[i] - max );
+        }
+        lse = max + log(sum) ;
     }
-    //cout << setprecision(64) << "max =" << max << endl;
-    double sum = 0.0;
-    vector<double> vec2(vec);
-    sort(vec2.begin(), vec2.end());
-    for(int i=0; i < vec2.size(); i++ ) {
-        sum += exp( vec2[i] - max );
-        //cout << i << " " << sum << endl;
-    }
-    lse = max + log(sum) ;
 }
 
 void postDecode(
@@ -716,7 +723,7 @@ void viterbi2(
     // recursion:
     double trX, trG, vmax, tmp, e, d, r;
     double negInf = - std::numeric_limits<double>::infinity();
-    double log_eps = log(numeric_limits<double>::epsilon());
+    //double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(6,99);
     vector<double> trGbin(11,99);
     vector<int> siteIndx;

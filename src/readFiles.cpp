@@ -192,15 +192,20 @@ void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions 
     pos.pos.resize( locs.size() );
     pos.cM.resize( locs.size() );
     unsigned int jstart = 0;
-    double x, tmp;
+    double x, tmp, yj;
     vector<int> flank(2), flankix(2);
     for(int i=0; i < locs.size(); i++ ) {
+        yj = -1.0;
         x = locs[i];
         flank[0] =   std::numeric_limits<int>::max();
         flank[1] = - std::numeric_limits<int>::max();
         std::fill( flankix.begin(), flankix.end(), 0 );
         for(int j=jstart; j < gMap.pos.size(); j++ ) {
             tmp = x - gMap.pos[j];
+            if( tmp == 0 ) {
+                yj = gMap.cM[j];
+                break;
+            }
             if( ( tmp>0 ) && ( tmp < flank[0] ) ) {
                 flank[0] = gMap.pos[j];
                 flankix[0] = j;
@@ -214,8 +219,13 @@ void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions 
             }
         }
         pos.pos[i] = locs[i];
-        pos.cM[i] =
-            gMap.cM[ flankix[0] ] + ( gMap.cM[ flankix[1] ] - gMap.cM[ flankix[0] ] ) * ( x - flank[0] ) / ( flank[1] - flank[0] );
+        if( yj == -1.0 ) {
+            pos.cM[i] =
+                gMap.cM[ flankix[0] ] + ( gMap.cM[ flankix[1] ] - gMap.cM[ flankix[0] ] ) * 
+                ( x - flank[0] ) / ( flank[1] - flank[0] );
+        } else {
+            pos.cM[i] = yj;
+        }
         //cout << pos.pos[i] << "\t" << pos.cM[i] << endl;
     }
 }

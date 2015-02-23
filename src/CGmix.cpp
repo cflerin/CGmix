@@ -130,11 +130,15 @@ int main(int argc, char *argv[]) {
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, pos, param, st, obs, sprob, fwd );
     // printMat( fwd );
+    matfile << "forward" << endl;
+    writeTmat( fwd, matfile );
 
     double Pxa, Pxb;
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
     backward( sites, pos, param, st, obs, sprob, bwd, Pxb );
+    matfile << "backward" << endl;
+    writeTmat( bwd, matfile );
     //
     //logSumExp( fwd[ fwd.size()-1 ], Pxa );
     Pxa = 0.0;
@@ -159,6 +163,8 @@ int main(int argc, char *argv[]) {
     postDecode( fwd, bwd, st, Pxa, pprob, pppath, ppprob, pswitch, logfile);
     // printMat( pprob );
     // writeMat( pprob, matfile );
+    matfile << "posterior" << endl;
+    writeTmat( pprob, matfile );
 
     logfile << "Starting Viterbi algorithm..." << endl;
     vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
@@ -249,22 +255,18 @@ int main(int argc, char *argv[]) {
             intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
             pathfile << j << "\t" << intpos << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << "\t" << gcprobXPop[j] << "\t" << transPGC[j] << endl;
         }
-        matfile << "forward" << endl;
-        writeTmat( fwd, matfile );
-        matfile << "backward" << endl;
-        writeTmat( bwd, matfile );
-        matfile << "posterior" << endl;
-        writeTmat( pprob, matfile );
     }
 
     ////////////////
-    //std::fill( pswitch.begin(), pswitch.end(), 0 );
-    //for(int j=2; j < 3; j++) {
-    //    pswitch[j] = 1;
-    //}
-    // for(int j=0; j<pswitch.size(); j++ ) {
-    //     cout << pswitch[j] << endl;
-    // }
+    if( param.fixPswitch > 0 ) { // testing only
+        std::fill( pswitch.begin(), pswitch.end(), 0 );
+        for(int j=0; j < param.fixPswitch; j++) {
+            pswitch[j] = 1;
+        }
+        //for(int j=0; j<pswitch.size(); j++ ) {
+        //    cout << pswitch[j] << endl;
+        //}
+    }
     ////////////////
 
     // restart hmm:
@@ -396,8 +398,8 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
-            cout << transPGC[j] << "\t" << withinPGC << "\t" << noGC << endl;
-            cout << "sum=" << transPGC[j]+withinPGC+noGC << endl;
+            //cout << transPGC[j] << "\t" << withinPGC << "\t" << noGC << endl;
+            //cout << "sum=" << transPGC[j]+withinPGC+noGC << endl;
             transPGCnorm[j] = transPGC[j] / ( transPGC[j] + withinPGC );
         }
         //
