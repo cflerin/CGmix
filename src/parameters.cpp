@@ -36,7 +36,7 @@ parameters::parameters(int argc, char *argv[]) {
     theta1 = 0.0;
     theta2 = 0.0;
     fixPswitch = -1;
-    highAccuracy = 1;
+    highAccuracy = 0;
 }
 
 string parameters::get_arg(unsigned int i) {
