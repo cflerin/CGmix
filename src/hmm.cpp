@@ -561,15 +561,12 @@ void postDecode(
         const hmmStates &st,
         const double &Px,
         vector<vector<double> > &pprob,
-        vector<string> &pppath,
-        vector<double> &ppprob,
-        vector<int> &pswitch,
+        pathVec &pvec,
         ofstream &logfile
         ) {
     double negInf = - std::numeric_limits<double>::infinity();
     // decoding:
     for(int j=0; j < pprob.size(); j++ ) {
-        // cout << "j= " << j << "\tfwd[j]= " << fwd[j].size() << "\tbwd[j]= " << bwd[j].size() << "\tpprob[j]= " << pprob[j].size() << "\tstLen= " << stLen << endl;
         for(int i=0; i < pprob[j].size(); i++ ) {
             pprob[j][i] = fwd[j][i] + bwd[j][i] - Px;
         }
@@ -594,7 +591,7 @@ void postDecode(
             pprob[j][i] = exp( pprob[j][i] ) / csum;
         }
     }
-    // find most proable path:
+    // find most probable path:
     int maxix = -1;
     double pmax;
     for(int j=0; j < pprob.size(); j++ ) {
@@ -605,10 +602,10 @@ void postDecode(
                 maxix = i;
             }
         }
-        ppprob[j] = pprob[j][maxix];
-        pppath[j] = st.states[maxix];
-        if( ( j > 0 ) && ( pppath[j] != pppath[j-1] ) )
-            pswitch[j] = 1;
+        pvec.ppprob[j] = pprob[j][maxix];
+        pvec.pppath[j] = st.states[maxix];
+        if( ( j > 0 ) && ( pvec.pppath[j] != pvec.pppath[j-1] ) )
+            pvec.pswitch[j] = 1;
     }
 }
 
@@ -620,8 +617,7 @@ void viterbi(
         const vector<int> &obs,
         const vector<double> &sprob,
         vector<vector<double> > &vit,
-        vector<string> &vpath,
-        vector<double> &vprob ) {
+        pathVec &pvec ) {
     // starting prob:
     vit[0] = sprob;
     // recursion:
@@ -677,8 +673,8 @@ void viterbi(
             maxix = i;
         }
     }
-    vpath[j] = st.states[maxix];
-    vprob[j] = vit[j][maxix];
+    pvec.vpath[j] = st.states[maxix];
+    pvec.vprob[j] = vit[j][maxix];
     // cout << vpath[j] << " " << vmax << " " << maxix << endl;
     // traceback:
     int t;
@@ -699,8 +695,8 @@ void viterbi(
                 maxix = f;
             }
         }
-        vpath[j] = st.states[ maxix ];
-        vprob[j] = vit[j][maxix];
+        pvec.vpath[j] = st.states[ maxix ];
+        pvec.vprob[j] = vit[j][maxix];
         // cout << vpath[j] << " " << vmax << " " << maxix << endl;
         std::fill( trXbin.begin(), trXbin.end(), 99 );
         std::fill( trGbin.begin(), trGbin.end(), 99 );
@@ -714,10 +710,8 @@ void viterbi2(
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
-        const vector<int> &pswitch,
         vector<vector<double> > &vit,
-        vector<string> &vpath,
-        vector<double> &vprob ) {
+        pathVec &pvec ) {
     // starting prob, same as fwd:
     vit[0] = sprob;
     // recursion:
@@ -731,7 +725,7 @@ void viterbi2(
         //d = dvec[j] - dvec[j-1];
         d = pos.pos[j] - pos.pos[j-1];
         r = pos.cM[j] - pos.cM[j-1];
-        if( pswitch[j] == 0 ) { // choose sites to match for emission
+        if( pvec.pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
             siteIndx = st.Gindx;
@@ -740,7 +734,7 @@ void viterbi2(
             vmax = negInf;
             for(int f=0; f < vit[j-1].size(); f++ ) {
                 trX = lookupXtrans( t, f, d, r, st, p, trXbin);
-                if( ( pswitch[j] == 1 ) | ( pswitch[j-1] == 1 ) ) {
+                if( ( pvec.pswitch[j] == 1 ) | ( pvec.pswitch[j-1] == 1 ) ) {
                     trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                     tmp = vit[j-1][f] + trX + trG;
                 } else {
@@ -774,8 +768,8 @@ void viterbi2(
             maxix = i;
         }
     } 
-    vpath[j] = st.states[maxix];
-    vprob[j] = vit[j][maxix];
+    pvec.vpath[j] = st.states[maxix];
+    pvec.vprob[j] = vit[j][maxix];
     // cout << vpath[j] << " " << vmax << " " << maxix << endl;
     // traceback:
     int t;
@@ -786,7 +780,7 @@ void viterbi2(
         for(int f=0; f < vit[j].size(); f++) {
             trX = lookupXtrans( t, f, d, r, st, p, trXbin);
             //if( pswitch[j] == 1 ) {
-            if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
+            if( ( pvec.pswitch[j] == 1 ) || ( pvec.pswitch[j+1] == 1 ) ) {
                 trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                 tmp = vit[j][f] + trX + trG;
             } else {
@@ -797,8 +791,8 @@ void viterbi2(
                 maxix = f;
             }
         }
-        vpath[j] = st.states[ maxix ];
-        vprob[j] = vit[j][maxix];
+        pvec.vpath[j] = st.states[ maxix ];
+        pvec.vprob[j] = vit[j][maxix];
         // cout << vpath[j] << " " << vmax << " " << maxix << endl;
         std::fill( trXbin.begin(), trXbin.end(), 99 );
         std::fill( trGbin.begin(), trGbin.end(), 99 );
@@ -823,3 +817,86 @@ void max( const vector<double> &vec, double maxelement ) {
             maxelement = tmp;
     }
 }
+
+pathVec::pathVec( parameters param ) {
+    pppath.resize( param.S );
+    ppprob.resize( param.S, 0.0 );
+    pswitch.resize( param.S, 0 );
+//
+    vpath.resize( param.S );
+    vprob.resize( param.S, 0.0 );
+//
+    gcprob.resize( param.S, 0.0 );
+    gcprobPop1.resize( param.S, 0.0 );
+    gcprobPop2.resize( param.S, 0.0 );
+    gcprobXPop.resize( param.S, 0.0 );
+    transPGC.resize( param.S, 0.0 );
+//
+    if( param.mode == 2 ) {
+        pppath2.resize( param.S );
+        ppprob2.resize( param.S, 0.0 );
+        vpath2.resize( param.S );
+        vprob2.resize( param.S, 0.0 );
+    }
+}
+
+void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<double> > &pprob, parameters &param, ofstream &pathfile ) {
+    int intpos;
+    double pXi, pGk;
+    // calculate total probability of a cross-population gene conversion:
+    for(int j=0; j < pprob.size(); j++ ) {
+        for(int i=0; i < pprob[j].size(); i++ ) {
+            //if( st.Ghap[i] == 0 ) { continue; }
+            if( st.Xpop[i] == 1 ) {
+                pXi = pprob[j][i];
+                for(int k=0; k < pprob[j].size(); k++ ) {
+                    if( st.Gpop[k] == 2 ) {
+                        pGk = pprob[j][k];
+                        pvec.transPGC[j] += pXi * pGk;
+                    }
+                }
+            }
+        }
+        for(int i=0; i < pprob[j].size(); i++ ) {
+            //if( st.Ghap[i] == 0 ) { continue; }
+            if( st.Xpop[i] == 2 ) {
+                pXi = pprob[j][i];
+                for(int k=0; k < pprob[j].size(); k++ ) {
+                    if( st.Gpop[k] == 1 ) {
+                        pGk = pprob[j][k];
+                        pvec.transPGC[j] += pXi * pGk;
+                    }
+                }
+            }
+        }
+    }
+    // output Viterbi path and probabilites:
+    double csum;
+    pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\t";
+    if( param.mode == 2 ) 
+        pathfile << "Vpath2\tVpathProb2\tPpath2\tPpathProb2\t";
+    pathfile << "GCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop" << endl;
+    for(int j=0; j < pprob.size(); j++ ) {
+        for(int i=0; i < pprob[j].size(); i++ ) {
+            if( st.Ghap[i] != 0 ) { // gene conversion state
+                pvec.gcprob[j] += pprob[j][i];
+                if( st.Gpop[i] == 1 ) {
+                    pvec.gcprobPop1[j] += pprob[j][i];
+                } else if( st.Gpop[i] == 2 ) {
+                    pvec.gcprobPop2[j] += pprob[j][i];
+                }
+                if( ( st.Xpop[i]==1 && st.Gpop[i]==2 ) || ( st.Xpop[i]==2 && st.Gpop[i]==1 ) ) {
+                    // cross-population gene conversion
+                    pvec.gcprobXPop[j] += pprob[j][i];
+                }
+            }
+        }
+        intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
+        pathfile << j << "\t" << intpos << "\t" << pvec.vpath[j] << "\t" << exp(pvec.vprob[j]) << "\t" << pvec.pppath[j] << "\t" << pvec.ppprob[j] << "\t" << pvec.pswitch[j] << "\t";
+        if( param.mode == 2 ) 
+            pathfile << pvec.vpath2[j] << "\t" << exp(pvec.vprob2[j]) << "\t" << pvec.pppath2[j] << "\t" << pvec.ppprob2[j] << "\t";
+
+        pathfile << pvec.gcprob[j] << "\t" << pvec.gcprobPop1[j] << "\t" << pvec.gcprobPop2[j] << "\t" << pvec.gcprobXPop[j] << "\t" << pvec.transPGC[j] << endl;
+    }
+}
+

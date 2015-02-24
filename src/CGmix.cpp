@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
     ofstream logfile ( param.logf.c_str() );
     ofstream pathfile ( param.pathf.c_str() );
-    ofstream matfile ( param.matf.c_str() );
+    ofstream matfile;
 
     param.print_params(logfile, 0);
     logfile << endl;
@@ -129,16 +129,21 @@ int main(int argc, char *argv[]) {
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, pos, param, st, obs, sprob, fwd );
-    // printMat( fwd );
-    matfile << "forward" << endl;
-    writeTmat( fwd, matfile );
+    if( param.matrixOutput == 1 ) {
+        // printMat( fwd );
+        ofstream matfile ( param.matf.c_str() );
+        matfile << "forward" << endl;
+        writeTmat( fwd, matfile );
+    }
 
     double Pxa, Pxb;
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
     backward( sites, pos, param, st, obs, sprob, bwd, Pxb );
-    matfile << "backward" << endl;
-    writeTmat( bwd, matfile );
+    if( param.matrixOutput == 1 ) {
+        matfile << "backward" << endl;
+        writeTmat( bwd, matfile );
+    }
     //
     //logSumExp( fwd[ fwd.size()-1 ], Pxa );
     Pxa = 0.0;
@@ -155,29 +160,32 @@ int main(int argc, char *argv[]) {
         cout << "P(x) diff=" << Pxa - Pxb << endl;
     //}
 
+    pathVec pvec( param );
+
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
-    vector<string> pppath( sites.size() );
-    vector<double> ppprob( sites.size() , 0.0);
-    vector<int> pswitch( sites.size(), 0 );
-    postDecode( fwd, bwd, st, Pxa, pprob, pppath, ppprob, pswitch, logfile);
-    // printMat( pprob );
-    // writeMat( pprob, matfile );
-    matfile << "posterior" << endl;
-    writeTmat( pprob, matfile );
+    postDecode( fwd, bwd, st, Pxa, pprob, pvec, logfile);
+    if( param.matrixOutput == 1 ) {
+        // printMat( pprob );
+        matfile << "posterior" << endl;
+        writeTmat( pprob, matfile );
+    }
 
-    logfile << "Starting Viterbi algorithm..." << endl;
-    vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
-    vector<string> vpath( sites.size() );
-    vector<double> vprob( sites.size() , 0.0);
-    viterbi( sites, pos, param, st, obs, sprob, vit, vpath, vprob );
-    // printMat( vit );
+    vector<vector<double> > vit;
+    if( param.viterbi == 1 ) {
+        logfile << "Starting Viterbi algorithm..." << endl;
+        vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
+        viterbi( sites, pos, param, st, obs, sprob, vit, pvec );
+        // printMat( vit );
+    } else {
+        logfile << "Skipping Viterbi algorithm..." << endl;
+    }
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         // find haplotype switches:
         vector<int> swIx;
-        for(int j=0; j < pswitch.size(); j++ ) {
-            if( pswitch[j] == 1 )
+        for(int j=0; j < pvec.pswitch.size(); j++ ) {
+            if( pvec.pswitch[j] == 1 )
                 swIx.push_back( j );
         }
         int width = 10; 
@@ -191,81 +199,21 @@ int main(int argc, char *argv[]) {
             if( repl[1] > (param.S-1) )
                 repl[1] = (param.S-1);
             for(int k=repl[0]; k <= repl[1]; k++ )
-                pswitch[k] = 1;
+                pvec.pswitch[k] = 1;
         }
     }
 
-    vector<double> gcprob( sites.size(), 0.0 );
-    vector<double> gcprobPop1( sites.size(), 0.0 );
-    vector<double> gcprobPop2( sites.size(), 0.0 );
-    vector<double> gcprobXPop( sites.size(), 0.0 );
-    vector<double> transPGC( sites.size(), 0.0 );
-    vector<double> transPGCnorm( sites.size(), 0.0 );
-    int intpos;
-    double pXi, pGk;
-    if( ( param.mode == 0 ) || ( param.mode == 1 ) ) {
+    if( param.mode == 1 ) {
         logfile << "Starting path output" << endl;
-        // calculate total probability of a cross-population gene conversion:
-        vector<double> transPGC( sites.size(), 0.0 );
-        for(int j=0; j < pprob.size(); j++ ) {
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                if( st.Ghap[i] == 0 ) { continue; }
-                if( st.Xpop[i] == 1 ) {
-                    pXi = pprob[j][i];
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st.Gpop[k] == 2 ) {
-                            pGk = pprob[j][k];
-                            transPGC[j] += pXi * pGk;
-                        }
-                    }
-                }
-            }
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                if( st.Ghap[i] == 0 ) { continue; }
-                if( st.Xpop[i] == 2 ) {
-                    pXi = pprob[j][i];
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st.Gpop[k] == 1 ) {
-                            pGk = pprob[j][k];
-                            transPGC[j] += pXi * pGk;
-                        }
-                    }
-                }
-            }
-        }
-        // output Viterbi path and probabilites:
-        double csum;
-        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tGCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop" << endl;
-        for(int j=0; j < pprob.size(); j++ ) {
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                if( st.Ghap[i] != 0 ) { // gene conversion state
-                    gcprob[j] += pprob[j][i];
-                    if( st.Gpop[i] == 1 ) {
-                        gcprobPop1[j] += pprob[j][i];
-                    } else if( st.Gpop[i] == 2 ) {
-                        gcprobPop2[j] += pprob[j][i];
-                    }
-                    if( ( st.Xpop[i]==1 && st.Gpop[i]==2 ) || ( st.Xpop[i]==2 && st.Gpop[i]==1 ) ) {
-                        // cross-population gene conversion
-                        gcprobXPop[j] += pprob[j][i];
-                    }
-                    //if( ( st.Xpop[i]==1 && st.Gpop[i]==2 ) )
-                }
-            }
-            intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
-            pathfile << j << "\t" << intpos << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << "\t" << gcprobXPop[j] << "\t" << transPGC[j] << endl;
-        }
+        pathOutput( pvec, st, pos, pprob, param, pathfile );
     }
 
     ////////////////
     if( param.fixPswitch > 0 ) { // testing only
-        std::fill( pswitch.begin(), pswitch.end(), 0 );
+        std::fill( pvec.pswitch.begin(), pvec.pswitch.end(), 0 );
         for(int j=0; j < param.fixPswitch; j++) {
-            pswitch[j] = 1;
+            pvec.pswitch[j] = 1;
         }
-        //for(int j=0; j<pswitch.size(); j++ ) {
-        //    cout << pswitch[j] << endl;
-        //}
     }
     ////////////////
 
@@ -282,8 +230,7 @@ int main(int argc, char *argv[]) {
         logfile << "Generated " << st2.states.size() << " states" << endl;
         param.print_params(logfile, 1);
 
-        //logfile << "new sprob" << endl;
-        if( pswitch[0] == 1 ) {
+        if( pvec.pswitch[0] == 1 ) {
             sprob.resize( st2.states.size(), 0.0 );
             std::fill( sprob.begin(), sprob.end(), 0.0 );
             getsprob( sites[0], param, st2, obs, sprob );
@@ -294,15 +241,17 @@ int main(int argc, char *argv[]) {
         }
 
         for(int j=0; j < param.S; j++ ) {
-            if( pswitch[j] == 0 ) {
+            if( pvec.pswitch[j] == 0 ) {
                 fwd[j].resize( st.states.size(), 0.0 );
                 std::fill( fwd[j].begin(), fwd[j].end(), 0.0 );
                 bwd[j].resize( st.states.size(), 0.0 );
                 std::fill( bwd[j].begin(), bwd[j].end(), 0.0 );
                 pprob[j].resize( st.states.size(), 0.0 );
                 std::fill( pprob[j].begin(), pprob[j].end(), 0.0 );
-                vit[j].resize( st.states.size(), 0.0 );
-                std::fill( vit[j].begin(), vit[j].end(), 0.0 );
+                if( param.viterbi == 1 ) {
+                    vit[j].resize( st.states.size(), 0.0 );
+                    std::fill( vit[j].begin(), vit[j].end(), 0.0 );
+                }
             } else {
                 fwd[j].resize( st2.states.size(), 0.0 );
                 std::fill( fwd[j].begin(), fwd[j].end(), 0.0 );
@@ -310,21 +259,27 @@ int main(int argc, char *argv[]) {
                 std::fill( bwd[j].begin(), bwd[j].end(), 0.0 );
                 pprob[j].resize( st2.states.size(), 0.0 );
                 std::fill( pprob[j].begin(), pprob[j].end(), 0.0 );
-                vit[j].resize( st2.states.size(), 0.0 );
-                std::fill( vit[j].begin(), vit[j].end(), 0.0 );
+                if( param.viterbi == 1 ) {
+                    vit[j].resize( st2.states.size(), 0.0 );
+                    std::fill( vit[j].begin(), vit[j].end(), 0.0 );
+                }
             }
             // cout << "j = " << j << "\t" << fwd[j].size() << endl;
         }
 
         logfile << "Starting forward algorithm..." << endl;;
-        forward2( sites, pos, param, st, st2, obs, sprob, pswitch, fwd );
-        matfile << "forward" << endl;
-        writeTmat( fwd, matfile );
+        forward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, fwd );
+        if( param.matrixOutput == 1 ) {
+            matfile << "forward" << endl;
+            writeTmat( fwd, matfile );
+        }
 
         logfile << "Starting backward algorithm..." << endl;
-        backward2( sites, pos, param, st, st2, obs, sprob, pswitch, bwd, Pxb );
-        matfile << "backward" << endl;
-        writeTmat( bwd, matfile );
+        backward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, bwd, Pxb );
+        if( param.matrixOutput == 1 ) {
+            matfile << "backward" << endl;
+            writeTmat( bwd, matfile );
+        }
 
         Pxa = 0.0;
         for(int i=0; i<fwd[ fwd.size()-1 ].size(); i++ ) {
@@ -341,88 +296,34 @@ int main(int argc, char *argv[]) {
         //}
 
         logfile << "Starting posterior decoding..." << endl;
-        vector<string> pppath2( sites.size() );
-        vector<double> ppprob2( sites.size() , 0.0);
-        vector<int> pswitch2 = pswitch;
-        postDecode( fwd, bwd, st2, Pxa, pprob, pppath2, ppprob2, pswitch2, logfile);
-        matfile << "posterior" << endl;
-        writeTmat( pprob, matfile );
+        pvec.pppath2.resize( sites.size() );
+        pvec.ppprob2.resize( sites.size(), 0.0 );
+        pvec.pswitch2 = pvec.pswitch;
+        postDecode( fwd, bwd, st2, Pxa, pprob, pvec, logfile);
+        if( param.matrixOutput == 1 ) {
+            matfile << "posterior" << endl;
+            writeTmat( pprob, matfile );
+        }
 
-        logfile << "Starting Viterbi algorithm..." << endl;
-        vector<string> vpath2( sites.size() );
-        vector<double> vprob2( sites.size() , 0.0);
-        viterbi2( sites, pos, param, st2, obs, sprob, pswitch, vit, vpath2, vprob2 );
+        if( param.viterbi == 1 ) {
+            logfile << "Starting Viterbi algorithm..." << endl;
+            pvec.vpath2.resize( sites.size() );
+            pvec.vprob2.resize( sites.size(), 0.0 );
+            viterbi2( sites, pos, param, st2, obs, sprob, vit, pvec );
+        } else {
+            logfile << "Skipping Viterbi algorithm..." << endl;
+        }
 
         logfile << "Starting path output" << endl;
-        // output Viterbi path and probabilites:
-        gcprob.resize( sites.size(), 0.0 );
-        std::fill( gcprob.begin(), gcprob.end(), 0.0 );
-        gcprobPop1.resize( sites.size(), 0.0 );
-        std::fill( gcprobPop1.begin(), gcprobPop1.end(), 0.0 );
-        gcprobPop2.resize( sites.size(), 0.0 );
-        std::fill( gcprobPop2.begin(), gcprobPop2.end(), 0.0 );
-        int intpos;
-        //
-        // calculate total probability of a cross-population gene conversion:
-        std::fill( transPGC.begin(), transPGC.end(), 0.0 );
-        std::fill( transPGCnorm.begin(), transPGCnorm.end(), 0.0 );
-        double withinPGC, noGC;
-        for(int j=0; j < pprob.size(); j++ ) {
-            withinPGC = noGC = 0.0;
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                //if( st2.Ghap[i] == 0 ) { continue; }
-                if( st2.Xpop[i] == 1 ) {
-                    pXi = pprob[j][i];
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st2.Gpop[k] == 2 ) {
-                            pGk = pprob[j][k];
-                            transPGC[j] += pXi * pGk;
-                            //cout << "i=" << i << "\tk=" << k << "\tpXi=" << pXi << "\tpGk=" << pGk << endl;
-                        } else if( st2.Gpop[k] == 1 ) {
-                            withinPGC += pXi * pprob[j][k];
-                        } // else if( st2.Gpop[k] == 0 ) { noGC += pXi * pprob[j][k]; }
-                    }
-                }
-            }
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                //if( st2.Ghap[i] == 0 ) { continue; }
-                if( st2.Xpop[i] == 2 ) {
-                    pXi = pprob[j][i];
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st2.Gpop[k] == 1 ) {
-                            pGk = pprob[j][k];
-                            transPGC[j] += pXi * pGk;
-                        } else if( st2.Gpop[k] == 2 ) {
-                            withinPGC += pXi * pprob[j][k];
-                        } // else if( st2.Gpop[k] == 0 ) { noGC += pXi * pprob[j][k]; }
-                    }
-                }
-            }
-            //cout << transPGC[j] << "\t" << withinPGC << "\t" << noGC << endl;
-            //cout << "sum=" << transPGC[j]+withinPGC+noGC << endl;
-            transPGCnorm[j] = transPGC[j] / ( transPGC[j] + withinPGC );
-        }
-        //
-        pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tVpath2\tVpathProb2\tPpath2\tPpathProb2\tGCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop\tGCprobXPopnorm" << endl;
-        for(int j=0; j < pprob.size(); j++ ) {
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                if( st2.Ghap[i] != 0 ) { // gene conversion state
-                    gcprob[j] += pprob[j][i];
-                    if( st2.Gpop[i] == 1 ) {
-                        gcprobPop1[j] += pprob[j][i];
-                    } else if( st2.Gpop[i] == 2 ) {
-                        gcprobPop2[j] += pprob[j][i];
-                    }
-                    if( ( st2.Xpop[i]==1 && st2.Gpop[i]==2 ) || ( st2.Xpop[i]==2 && st2.Gpop[i]==1 ) ) {
-                        // cross-population gene conversion
-                        gcprobXPop[j] += pprob[j][i];
-                    }
-                }
-            }
-            intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
-            pathfile << j << "\t" << intpos << "\t" << vpath[j] << "\t" << exp(vprob[j]) << "\t" << pppath[j] << "\t" << ppprob[j] << "\t" << pswitch[j] << "\t";
-            pathfile << vpath2[j] << "\t" << exp(vprob2[j]) << "\t" << pppath2[j] << "\t" << ppprob2[j] << "\t" << gcprob[j] << "\t" << gcprobPop1[j] << "\t" << gcprobPop2[j] << "\t" << gcprobXPop[j] << "\t" << transPGC[j] << "\t" << transPGCnorm[j] << endl;
-        }
+        pvec.gcprob.resize( sites.size(), 0.0 );
+        std::fill( pvec.gcprob.begin(), pvec.gcprob.end(), 0.0 );
+        pvec.gcprobPop1.resize( sites.size(), 0.0 );
+        std::fill( pvec.gcprobPop1.begin(), pvec.gcprobPop1.end(), 0.0 );
+        pvec.gcprobPop2.resize( sites.size(), 0.0 );
+        std::fill( pvec.gcprobPop2.begin(), pvec.gcprobPop2.end(), 0.0 );
+        std::fill( pvec.transPGC.begin(), pvec.transPGC.end(), 0.0 );
+        pathOutput( pvec, st2, pos, pprob, param, pathfile );
+
     } // end of 2nd pass
 
     time(&end);
@@ -432,7 +333,8 @@ int main(int argc, char *argv[]) {
 
     logfile.close();
     pathfile.close();
-    matfile.close();
+    if( param.matrixOutput == 1 )
+        matfile.close();
 }
 
 

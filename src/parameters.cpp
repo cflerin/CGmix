@@ -14,7 +14,6 @@ parameters::parameters(int argc, char *argv[]) {
         tmp = argv[i];
         this->argv.push_back(tmp);
     }
-
     mode = 99;
     fname = "empty" ;
     outfname = "unset" ;
@@ -22,7 +21,6 @@ parameters::parameters(int argc, char *argv[]) {
     pathf = "empty";
     matf = "empty";
     gmfile = "/home/ccampbell/resources/genetic_map_HapMapII_GRCh37/genetic_map_GRCh37_chr22.txt.gz";
-
     n1 = 0; // set later
     n2 = 0; // set later
     S = 0; // set later
@@ -32,11 +30,12 @@ parameters::parameters(int argc, char *argv[]) {
     Ne2 = 18000;
     f = 10.0; // scaling factor for g ( f=gamma/rho, g=f*r, and gamma=4*Ne*g )
     lam = 1.0/500 * 1000; // tract length (kb)
-    //////
     theta1 = 0.0;
     theta2 = 0.0;
     fixPswitch = -1;
     highAccuracy = 0;
+    viterbi = 0;
+    matrixOutput = 0;
 }
 
 string parameters::get_arg(unsigned int i) {
@@ -51,33 +50,24 @@ void parameters::error(string err_msg, int code) {
     exit(code);
 }
 
-
 void parameters::read_parameters() {
     unsigned int i=1;
     string in_str; 
     while ( i < argv.size() ) { 
         in_str = argv[i];
         if (in_str == "--in") { fname = get_arg(i+1); i++; }
+        else if (in_str == "--out") { outfname = get_arg(i+1); i++; }
         else if (in_str == "--gmfile") { gmfile = get_arg(i+1); i++; }
         else if (in_str == "--mode") { mode = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--T") { T = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--u1") { u1 = atof( get_arg(i+1).c_str() ); i++; }
-        //else if (in_str == "--rho1") { rho1 = atof( get_arg(i+1).c_str() ); i++; }
-        //else if (in_str == "--rho2") { rho2 = atof( get_arg(i+1).c_str() ); i++; }
-        //else if (in_str == "--gam1") { gam1 = atof( get_arg(i+1).c_str() ); i++; }
-        //else if (in_str == "--gam2") { gam2 = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--lam") { lam = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta1") { theta1 = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta2") { theta2 = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--fixPswitch") { fixPswitch = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--highAccuracy") { highAccuracy = atoi( get_arg(i+1).c_str() ); i++; }
-        //else if (in_str == "--theta3") { theta3 = atof( get_arg(i+1).c_str() ); i++; }
-        //////
-        //else if (in_str == "--rho") { rho = atof( get_arg(i+1).c_str() ); i++; }
-        //else if (in_str == "--gam") { gam = atof( get_arg(i+1).c_str() ); i++; }
-        //else if (in_str == "--theta") { theta = atof( get_arg(i+1).c_str() ); i++; }
-        //////
-
+        else if (in_str == "--viterbi") { viterbi = atoi( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--matrixOutput") { viterbi = atoi( get_arg(i+1).c_str() ); i++; }
         else
             error("Unknown option: " + string(in_str), 0);
         i++;
@@ -91,7 +81,6 @@ void parameters::read_parameters() {
 
 void parameters::print_params(ofstream &logfile, const int which) {
     if( which == 0 ) {
-        //logfile << argv << endl;
         logfile << "Mode " << mode;
         if( mode == 0 ) { logfile << ". Haplotype-only model." << endl; }
         if( mode == 1 ) { logfile << ". Full haplotype and gene conversion model." << endl; }
@@ -112,18 +101,9 @@ void parameters::print_params(ofstream &logfile, const int which) {
         logfile << "u1 = " << u1 << endl;
         logfile << "Ne1 = " << Ne1 << endl;
         logfile << "Ne2 = " << Ne2 << endl;
-        //logfile << "rho1 = " << rho1 << endl;
-        //logfile << "rho2 = " << rho2 << endl;
-        //logfile << "gamma1 = " << gam1 << endl;
-        //logfile << "gamma2 = " << gam2 << endl;
         logfile << "lambda = " << lam << endl;
         logfile << "theta1 = " << theta1 << endl;
         logfile << "theta2 = " << theta2 << endl;
-        //logfile << "theta3 = " << theta3 << endl;
-        //
-        //logfile << "rho = " << rho << endl;
-        //logfile << "gamma = " << gam << endl;
-        //logfile << "theta = " << theta << endl;
     }
 
 

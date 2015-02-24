@@ -21,6 +21,7 @@
 #include "parameters.h"
 
 using namespace std;
+extern ofstream matfile;
 
 class hmmStates 
 {
@@ -29,6 +30,19 @@ class hmmStates
         ~hmmStates(){};
         vector<string> states;
         vector<int> Xpop, Xhap, Gpop, Ghap, Xindx, Gindx;
+};
+class pathVec
+{
+    public:
+        pathVec( parameters param );
+        ~pathVec(){};
+        vector<int> pswitch;
+        vector<string> vpath, pppath, pppath2;
+        vector<double> vprob, gcprob, gcprobPop1, gcprobPop2, ppprob, gcprobXPop, transPGC;
+        //
+        vector<double> ppprob2, vprob2;
+        vector<int> pswitch2;
+        vector<string> vpath2;
 };
 
 void generateStates(const hapDef &hapInfo, hmmStates &st );
@@ -50,7 +64,7 @@ void getsprobX(
         vector<double> &sprob );
 
 double lookupXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trXbin );
-double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin );
+inline double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin );
 
 void forward( 
         const vector<vector<int> > &sites,
@@ -102,9 +116,7 @@ void postDecode(
         const hmmStates &st,
         const double &Px,
         vector<vector<double> > &pprob,
-        vector<string> &pppath,
-        vector<double> &ppprob,
-        vector<int> &pswitch,
+        pathVec &pvec,
         ofstream &logfile);
 
 void viterbi(
@@ -115,8 +127,7 @@ void viterbi(
         const vector<int> &obs,
         const vector<double> &sprob,
         vector<vector<double> > &vit,
-        vector<string> &vpath,
-        vector<double> &vprob );
+        pathVec &pvec );
 void viterbi2(
         const vector<vector<int> > &sites,
         const positions &pos,
@@ -124,13 +135,12 @@ void viterbi2(
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
-        const vector<int> &pswitch,
         vector<vector<double> > &vit,
-        vector<string> &vpath,
-        vector<double> &vprob );
+        pathVec &pvec );
 
 void max( const vector<double> &vec, double maxelement );
 
+void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<double> > &pprob, parameters &param, ofstream &pathfile );
 
 #endif
 

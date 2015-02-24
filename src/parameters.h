@@ -27,7 +27,6 @@ class parameters
         string pathf;   // determined
         string matf;    // determined
         string gmfile;
-
         int n1;         // determined
         int n2;         // determined
         int S;          // determined
@@ -37,10 +36,6 @@ class parameters
         double Ne1;
         double Ne2;
         double f;
-        //double rho1;
-        //double rho2;
-        //double gam1;
-        //double gam2;
         double lam;
         double theta1;  // determined
         double theta2;  // determined
@@ -49,18 +44,14 @@ class parameters
         double theta2_match;    // determined
         double theta2_mismatch; // determined
         int highAccuracy; // whether to use sort in logSumExp (1) or not (0)
-
-        int fixPswitch;
-        // double rho;
-        // double gam;
-        // double theta;
+        int viterbi; // whether to run viterbi or not
+        int fixPswitch; // how many sites (from index 0) to force into full model. Testing purposes only.
+        int matrixOutput; // whether to output full forward/backward/posterior matrices
 
         parameters(int argc, char *argv[]);
         ~parameters(){};
-
         void read_parameters();
         void print_help();
-        //void print_params();
         void print_params(ofstream &logfile, const int which);
 
     private:
@@ -70,8 +61,5 @@ class parameters
         string get_arg(unsigned int i);
 };
 
-
-
-
-
 #endif
+
