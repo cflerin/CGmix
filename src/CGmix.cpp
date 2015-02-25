@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 
     ofstream logfile ( param.logf.c_str() );
     ofstream pathfile ( param.pathf.c_str() );
-    ofstream matfile;
+    //ofstream matfile;
 
     param.print_params(logfile, 0);
     logfile << endl;
@@ -129,21 +129,11 @@ int main(int argc, char *argv[]) {
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, pos, param, st, obs, sprob, fwd );
-    if( param.matrixOutput == 1 ) {
-        // printMat( fwd );
-        ofstream matfile ( param.matf.c_str() );
-        matfile << "forward" << endl;
-        writeTmat( fwd, matfile );
-    }
 
     double Pxa, Pxb;
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
     backward( sites, pos, param, st, obs, sprob, bwd, Pxb );
-    if( param.matrixOutput == 1 ) {
-        matfile << "backward" << endl;
-        writeTmat( bwd, matfile );
-    }
     //
     //logSumExp( fwd[ fwd.size()-1 ], Pxa );
     Pxa = 0.0;
@@ -165,11 +155,6 @@ int main(int argc, char *argv[]) {
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
     postDecode( fwd, bwd, st, Pxa, pprob, pvec, logfile);
-    if( param.matrixOutput == 1 ) {
-        // printMat( pprob );
-        matfile << "posterior" << endl;
-        writeTmat( pprob, matfile );
-    }
 
     vector<vector<double> > vit;
     if( param.viterbi == 1 ) {
@@ -269,17 +254,9 @@ int main(int argc, char *argv[]) {
 
         logfile << "Starting forward algorithm..." << endl;;
         forward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, fwd );
-        if( param.matrixOutput == 1 ) {
-            matfile << "forward" << endl;
-            writeTmat( fwd, matfile );
-        }
 
         logfile << "Starting backward algorithm..." << endl;
         backward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, bwd, Pxb );
-        if( param.matrixOutput == 1 ) {
-            matfile << "backward" << endl;
-            writeTmat( bwd, matfile );
-        }
 
         Pxa = 0.0;
         for(int i=0; i<fwd[ fwd.size()-1 ].size(); i++ ) {
@@ -300,10 +277,6 @@ int main(int argc, char *argv[]) {
         pvec.ppprob2.resize( sites.size(), 0.0 );
         pvec.pswitch2 = pvec.pswitch;
         postDecode( fwd, bwd, st2, Pxa, pprob, pvec, logfile);
-        if( param.matrixOutput == 1 ) {
-            matfile << "posterior" << endl;
-            writeTmat( pprob, matfile );
-        }
 
         if( param.viterbi == 1 ) {
             logfile << "Starting Viterbi algorithm..." << endl;
@@ -333,8 +306,16 @@ int main(int argc, char *argv[]) {
 
     logfile.close();
     pathfile.close();
-    if( param.matrixOutput == 1 )
+    if( param.matrixOutput == 1 ) {
+        ofstream matfile ( param.matf.c_str() );
+        matfile << "forward" << endl;
+        writeTmat( fwd, matfile );
+        matfile << "backward" << endl;
+        writeTmat( bwd, matfile );
+        matfile << "posterior" << endl;
+        writeTmat( pprob, matfile );
         matfile.close();
+    }
 }
 
 

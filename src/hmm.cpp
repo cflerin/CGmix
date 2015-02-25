@@ -251,7 +251,7 @@ inline double lookupGtrans(const int &to, const int &from, const double &d, cons
     if( st.Gpop[to] == 2 ) // shift type index by 5 if transitioning to a haplotype in pop #2.
         type += 5;
     //cout << " from" << st.Ghap[from] << " to" << st.Ghap[to];
-    //cout << " type" << type << " ";
+    //cout << " type" << type << endl;
     // lookup and return a value already seen:
     return( trGbin[ type ] );
 }
