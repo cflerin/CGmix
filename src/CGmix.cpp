@@ -154,7 +154,8 @@ int main(int argc, char *argv[]) {
 
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
-    postDecode( fwd, bwd, st, Pxa, pprob, pvec, logfile);
+    //postDecode( fwd, bwd, st, Pxa, pprob, pvec, logfile);
+    postDecode( fwd, bwd, st, Pxa, pprob, pvec.pppath, pvec.ppprob, logfile);
 
     vector<vector<double> > vit;
     if( param.viterbi == 1 ) {
@@ -168,8 +169,12 @@ int main(int argc, char *argv[]) {
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         // find haplotype switches:
+        for(int j=1; j < param.S; j++ ) {
+            if( pvec.pppath[j] != pvec.pppath[j-1] )
+                pvec.pswitch[j] = 1;
+        }
         vector<int> swIx;
-        for(int j=0; j < pvec.pswitch.size(); j++ ) {
+        for(int j=0; j < param.S; j++ ) {
             if( pvec.pswitch[j] == 1 )
                 swIx.push_back( j );
         }
@@ -276,7 +281,8 @@ int main(int argc, char *argv[]) {
         pvec.pppath2.resize( sites.size() );
         pvec.ppprob2.resize( sites.size(), 0.0 );
         pvec.pswitch2 = pvec.pswitch;
-        postDecode( fwd, bwd, st2, Pxa, pprob, pvec, logfile);
+        //postDecode( fwd, bwd, st2, Pxa, pprob, pvec, logfile);
+        postDecode( fwd, bwd, st2, Pxa, pprob, pvec.pppath2, pvec.ppprob2, logfile);
 
         if( param.viterbi == 1 ) {
             logfile << "Starting Viterbi algorithm..." << endl;

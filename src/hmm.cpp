@@ -548,7 +548,7 @@ void logSumExp( const vector<double> &vec, double &lse, const int &hp ) {
         double a;
         for(int i=0; i < vec.size(); i++ ) {
             a = vec[i] - max;
-            if( a > -37 )
+            //if( a > -37 )
                 sum += exp( a );
         }
         lse = max + log(sum) ;
@@ -561,7 +561,9 @@ void postDecode(
         const hmmStates &st,
         const double &Px,
         vector<vector<double> > &pprob,
-        pathVec &pvec,
+        vector<string> &pppath,
+        vector<double> &ppprob,
+        //pathVec &pvec,
         ofstream &logfile
         ) {
     double negInf = - std::numeric_limits<double>::infinity();
@@ -602,10 +604,8 @@ void postDecode(
                 maxix = i;
             }
         }
-        pvec.ppprob[j] = pprob[j][maxix];
-        pvec.pppath[j] = st.states[maxix];
-        if( ( j > 0 ) && ( pvec.pppath[j] != pvec.pppath[j-1] ) )
-            pvec.pswitch[j] = 1;
+        ppprob[j] = pprob[j][maxix];
+        pppath[j] = st.states[maxix];
     }
 }
 
@@ -823,7 +823,7 @@ pathVec::pathVec( parameters param ) {
     ppprob.resize( param.S, 0.0 );
     pswitch.resize( param.S, 0 );
 //
-    vpath.resize( param.S );
+    vpath.resize( param.S, "0" );
     vprob.resize( param.S, 0.0 );
 //
     gcprob.resize( param.S, 0.0 );

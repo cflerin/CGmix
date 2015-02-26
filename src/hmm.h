@@ -116,7 +116,9 @@ void postDecode(
         const hmmStates &st,
         const double &Px,
         vector<vector<double> > &pprob,
-        pathVec &pvec,
+        vector<string> &pppath,
+        vector<double> &ppprob,
+        //pathVec &pvec,
         ofstream &logfile);
 
 void viterbi(
