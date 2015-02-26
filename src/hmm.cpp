@@ -301,7 +301,7 @@ void forward(
                 if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
                 else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
-            logSumExp( tmp, lsum, p.highAccuracy );
+            logSumExp( tmp, lsum, p.passAcc );
             fwd[j][t] = e + lsum;
             // cout << t << endl;
         } // end 'to' loop
@@ -361,7 +361,7 @@ void forward2(
                 if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
                 else if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
-            logSumExp( tmp, lsum, p.highAccuracy );
+            logSumExp( tmp, lsum, p.passAcc );
             fwd[j][t] = e + lsum;
         } // end 'to' loop
         std::fill( trXbin.begin(), trXbin.end(), 99 );
@@ -416,7 +416,7 @@ void backward(
                 }
                 //cout << endl;
             } // t loop
-            logSumExp( tmp, lsum, p.highAccuracy );
+            logSumExp( tmp, lsum, p.passAcc );
             //cout << "j= " << j << "\tf= " << f << "\tlsum= " << lsum << endl << endl;
             bwd[j][f] = lsum;
         } // f loop
@@ -486,7 +486,7 @@ void backward2(
                     tmp[t] = bwd[j+1][t] + trX + e ;
                 }
             } // t loop
-            logSumExp( tmp, lsum, p.highAccuracy );
+            logSumExp( tmp, lsum, p.passAcc );
             bwd[j][f] = lsum;
         } // f loop
         std::fill( trXbin.begin(), trXbin.end(), 99 );
@@ -548,7 +548,7 @@ void logSumExp( const vector<double> &vec, double &lse, const int &hp ) {
         double a;
         for(int i=0; i < vec.size(); i++ ) {
             a = vec[i] - max;
-            //if( a > -37 )
+            if( a > -37 )
                 sum += exp( a );
         }
         lse = max + log(sum) ;

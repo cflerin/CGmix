@@ -124,8 +124,10 @@ int main(int argc, char *argv[]) {
     vector<double> sprob( st.states.size(), 0 );
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         getsprobX( sites[0], param, st, obs, sprob );
+        param.passAcc = 1; // force LSE sort on first pass
     } else if( param.mode == 1 ) {
         getsprob( sites[0], param, st, obs, sprob );
+        param.passAcc = param.highAccuracy; // set to user-selected state
     }
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, pos, param, st, obs, sprob, fwd );
@@ -219,6 +221,8 @@ int main(int argc, char *argv[]) {
         generateStates( hapInfo, st2 );
         logfile << "Generated " << st2.states.size() << " states" << endl;
         param.print_params(logfile, 1);
+
+        param.passAcc = param.highAccuracy; // set back to user selected state
 
         if( pvec.pswitch[0] == 1 ) {
             sprob.resize( st2.states.size(), 0.0 );

@@ -44,6 +44,7 @@ class parameters
         double theta2_match;    // determined
         double theta2_mismatch; // determined
         int highAccuracy; // whether to use sort in logSumExp (1) or not (0)
+        int passAcc; // if two-pass model, use this for force sort on first pass
         int viterbi; // whether to run viterbi or not
         int fixPswitch; // how many sites (from index 0) to force into full model. Testing purposes only.
         int matrixOutput; // whether to output full forward/backward/posterior matrices

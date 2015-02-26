@@ -67,7 +67,7 @@ void parameters::read_parameters() {
         else if (in_str == "--fixPswitch") { fixPswitch = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--highAccuracy") { highAccuracy = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--viterbi") { viterbi = atoi( get_arg(i+1).c_str() ); i++; }
-        else if (in_str == "--matrixOutput") { matrixOutput = get_arg(i+1).c_str(); i++; }
+        else if (in_str == "--matrixOutput") { matrixOutput = atoi( get_arg(i+1).c_str() ); i++; }
         else
             error("Unknown option: " + string(in_str), 0);
         i++;
