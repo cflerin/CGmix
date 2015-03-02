@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if( param.mode == 1 ) {
+    if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         logfile << "Starting path output" << endl;
         pathOutput( pvec, st, pos, pprob, param, pathfile );
     }

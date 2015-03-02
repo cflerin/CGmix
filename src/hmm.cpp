@@ -301,6 +301,7 @@ void forward(
                 if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
                 else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
+            //cout << "j=" << j << endl;
             logSumExp( tmp, lsum, p.passAcc );
             fwd[j][t] = e + lsum;
             // cout << t << endl;
@@ -361,6 +362,7 @@ void forward2(
                 if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
                 else if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
+            // cout << "j=" << j << endl;
             logSumExp( tmp, lsum, p.passAcc );
             fwd[j][t] = e + lsum;
         } // end 'to' loop
@@ -532,17 +534,8 @@ void writeTmat( const vector<vector<double> > &mat, ofstream &matfile ) {
     }
 }
 
-void logSumExp( const vector<double> &vec, double &lse, const int &hp ) {
-    if( hp == 1 ) {
-        double sum = 0.0;
-        vector<double> vec2(vec);
-        sort(vec2.begin(), vec2.end());
-        double max = vec2.back();
-        for(int i=0; i < vec2.size(); i++ ) {
-            sum += exp( vec2[i] - max );
-        }
-        lse = max + log(sum) ;
-    } else {
+void logSumExp( vector<double> &vec, double &lse, const int &hp ) {
+    if( hp == 0 ) {
         double max = *max_element(vec.begin(), vec.end());
         double sum = 0.0;
         double a;
@@ -550,6 +543,31 @@ void logSumExp( const vector<double> &vec, double &lse, const int &hp ) {
             a = vec[i] - max;
             if( a > -37 )
                 sum += exp( a );
+        }
+        lse = max + log(sum) ;
+    } else if( hp == 1 ) {
+        double sum = 0.0;
+        sort(vec.begin(), vec.end());
+        double max = vec.back();
+        double a;
+        for(int i=0; i < vec.size(); i++ )
+        {
+            sum += exp( vec[i] - max );
+        }
+        lse = max + log(sum) ;
+    } else if( hp == 2 ) {
+        double sum = 0.0;
+        sort(vec.begin(), vec.end());
+        double max = vec.back();
+        double a;
+        for(int i=0; i < vec.size(); i++ )
+        {
+            a = vec[i] - max;
+            if (a > -37) {
+                //cout << "break" << endl;
+                break;
+            } //else { cout << "nobreak" << endl; }
+            sum += exp( a );
         }
         lse = max + log(sum) ;
     }

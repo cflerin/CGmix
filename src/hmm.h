@@ -109,7 +109,7 @@ void backward2(
 void printMat( const vector<vector<double> > &mat );
 void writeMat( const vector<vector<double> > &mat, ofstream &matfile );
 void writeTmat( const vector<vector<double> > &mat, ofstream &matfile );
-void logSumExp( const vector<double> &vec, double &lse, const int &hp );
+void logSumExp( vector<double> &vec, double &lse, const int &hp );
 void postDecode(
         const vector<vector<double> > &fwd,
         const vector<vector<double> > &bwd,
