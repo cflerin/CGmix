@@ -31,33 +31,89 @@ int main(int argc, char *argv[]) {
     param.print_params(logfile, 0);
     logfile << endl;
 
+    ////////////////////////////////////
     // read in data:
     vector<vector<int> > sites;
-    readSites( param.fname + ".sites", sites );
-    logfile << "Read " << sites[0].size() << " haplotypes with " << sites.size() << " sites" << endl;
-    // print2Dvec( sites );
-
     vector<double> locs;
-    readLocs( param.fname + ".locs", locs);
-    logfile << "Read " << locs.size() << " physical positions" << endl;
-    // print1Dvec( locs ); cout << endl;
-
-    vector<vector<string> > tmp;
     hapDef hapInfo;
-    readHapInfo( param.fname + ".hapnames", tmp );
-    for(int i=0; i < tmp.size(); i++ ) {
-        hapInfo.hapName.push_back( tmp[i][0] );
-        hapInfo.hapPop.push_back( tmp[i][1] );
-        hapInfo.hN.push_back(i+1);
-        if( tmp[i][1] == "p1" )
-            hapInfo.hP.push_back(1);
-        if( tmp[i][1] == "p2" )
-            hapInfo.hP.push_back(2);
-        if( tmp[i][1] == "p3" )
-            hapInfo.hP.push_back(3);
-        // cout << hapInfo.hapName[i] << " " << hapInfo.hapPop[i] << " " << hapInfo.hN[i] << " " << hapInfo.hP[i] << endl;
+    vector<int> obs;
+    if( param.fname != "unset" ) {
+        readSites( param.fname + ".sites", sites );
+        logfile << "Read " << sites[0].size() << " haplotypes with " << sites.size() << " sites" << endl;
+        // print2Dvec( sites );
+
+        readLocs( param.fname + ".locs", locs);
+        logfile << "Read " << locs.size() << " physical positions" << endl;
+
+        vector<vector<string> > tmp;
+        readHapInfo( param.fname + ".hapnames", tmp );
+        logfile << "Read " << tmp.size() << " haplotype definitions" << endl;
+        vector<int> obsIndx;
+        for(int i=0; i < tmp.size(); i++ ) {
+            if( tmp[i][1] == "p3" ) {
+                //hapInfo.hP.push_back(3);
+                obsIndx.push_back(i);
+                continue;
+            }
+            hapInfo.hapName.push_back( tmp[i][0] );
+            hapInfo.hapPop.push_back( tmp[i][1] );
+            hapInfo.hN.push_back(i+1);
+            if( tmp[i][1] == "p1" )
+                hapInfo.hP.push_back(1);
+            if( tmp[i][1] == "p2" )
+                hapInfo.hP.push_back(2);
+            // cout << hapInfo.hapName[i] << " " << hapInfo.hapPop[i] << " " << hapInfo.hN[i] << " " << hapInfo.hP[i] << endl;
+        }
+        //logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
+
+        if( obsIndx.size() > 1 ) {
+            cout << "Too many p3 haplotypes!" << endl;
+            exit(1);
+        }
+        obs.resize( sites.size(), 0.0 );
+        for(int j=0; j < sites.size(); j++) {
+            obs[j] = sites[j][ obsIndx[0] ];
+            cout << "before erase:" << sites[j].size() << endl;
+            sites[j].erase(sites[j].begin()+ obsIndx[0] );
+            cout << "after erase:" << sites[j].size() << endl;
+        }
+        /*
+        for(int i=0; i < hapInfo.hN.size(); i++) {
+            if( hapInfo.hapName[i] == "obs" ) {
+                for(int j=0; j < sites.size(); j++) {
+                    obs[j] = sites[j][i];
+                    cout << "before erase:" << sites[j].size() << endl;
+                    sites[j].erase(sites[j].begin()+i);
+                    cout << "after erase:" << sites[j].size() << endl;
+                }
+            }
+        }
+        */
+    } else {
+        // reference input:
+        readTSites( param.ref + ".sites", sites );
+        logfile << "Read " << sites[0].size() << " reference haplotypes with " << sites.size() << " sites" << endl;
+        // positions:
+        readLocs( param.ref + ".locs", locs);
+        logfile << "Read " << locs.size() << " reference physical positions" << endl;
+        // hapnames
+        vector<vector<string> > tmp;
+        readHapInfo( param.ref + ".hapnames", tmp );
+        for(int i=0; i < tmp.size(); i++ ) {
+            hapInfo.hapName.push_back( tmp[i][0] );
+            hapInfo.hapPop.push_back( tmp[i][1] );
+            hapInfo.hN.push_back(i+1);
+            if( tmp[i][1] == "p1" )
+                hapInfo.hP.push_back(1);
+            if( tmp[i][1] == "p2" )
+                hapInfo.hP.push_back(2);
+            // cout << hapInfo.hapName[i] << " " << hapInfo.hapPop[i] << " " << hapInfo.hN[i] << " " << hapInfo.hP[i] << endl;
+        }
+        logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
+
+        // read admixed haplotype:
+        readAdmixSites( param.admix + ".sites", obs );
     }
-    logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
 
     geneticMap gMap;
     readGenMap( param.gmfile, gMap );
@@ -110,15 +166,6 @@ int main(int argc, char *argv[]) {
     //cout << "theta2 " << exp( param.theta2_match ) << "\t" << exp( param.theta2_mismatch ) << endl;
 
     param.print_params(logfile, 1);
-
-    vector<int> obs( param.S, 0 );
-    for(int i=0; i < hapInfo.hN.size(); i++) {
-        if( hapInfo.hapName[i] == "obs" ) {
-            for(int j=0; j < sites.size(); j++) {
-                obs[j] = sites[j][i];
-            }
-        }
-    }
 
     logfile << "Starting forward algorithm..." << endl;;
     vector<double> sprob( st.states.size(), 0 );
@@ -195,7 +242,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
+    if( ( param.mode == 0 ) || ( param.mode == 1 ) ) {
         logfile << "Starting path output" << endl;
         pathOutput( pvec, st, pos, pprob, param, pathfile );
     }

@@ -22,6 +22,8 @@ class parameters
     public:
         int mode;
         string fname;
+        string ref;
+        string admix;
         string outfname; // determined
         string logf;    // determined
         string pathf;   // determined

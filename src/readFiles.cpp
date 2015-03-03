@@ -47,6 +47,7 @@ void print1DvecString(const vector<string> &vec) {
 }
 
 void readSites(const string &fname, vector<vector<int> > &sites ) {
+// read sites from standard format: file lines = haplotypes, file columns = sites
     ifstream file ( fname.c_str() );
     unsigned int cnt = 0;
     if (file.is_open()) {
@@ -230,3 +231,50 @@ void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions 
     }
 }
 
+void readAdmixSites(const string &fname, vector<int> &locs ) {
+    ifstream file ( fname.c_str() );
+    if (file.is_open()) {
+        while (file.good()) {
+            string line;
+            getline(file, line);
+            if( line == "" )
+                continue;
+            stringstream ss(line);
+            int f = 0.0;
+            ss >> f;
+            locs.push_back(f);
+        }
+        file.close();
+    } else
+        cout << "Failed to open admix sites file: " << fname << endl;
+}
+
+void readTSites(const string &fname, vector<vector<int> > &sites ) {
+// read sites from transposed format: file lines = sites, file columns = haplotypes
+    ifstream file ( fname.c_str() );
+    unsigned int cnt = 0;
+    vector<int> row;
+    if (file.is_open()) {
+        while (file.good()) {
+            string line;
+            getline(file, line);
+            if( line == "" )
+                continue;
+            stringstream ss(line);
+            string field;
+            // read in first row (haplotypes)
+            // std::fill( row.begin(), row.end(), -1 );
+            vector<int> row;
+            while (getline(ss, field, '\t')) {
+                stringstream fs(field);
+                int f = -1;
+                fs >> f;
+                row.push_back(f);
+            }
+            // add to sites vec:
+            sites.push_back( row );
+        }
+        file.close();
+    } else
+        cout << "Failed to open sites file: " << fname << endl;
+}

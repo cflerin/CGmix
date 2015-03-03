@@ -56,6 +56,9 @@ void print1DvecString(const vector<string> &vec);
 void readGenMap(const string &fname, geneticMap &gMap );
 void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions &pos );
 
+void readAdmixSites(const string &fname, vector<int> &locs );
+void readTSites(const string &fname, vector<vector<int> > &sites );
+
 #endif
 
 

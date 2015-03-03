@@ -15,11 +15,13 @@ parameters::parameters(int argc, char *argv[]) {
         this->argv.push_back(tmp);
     }
     mode = 99;
-    fname = "empty" ;
+    fname = "unset" ;
+    ref = "unset" ;
+    admix = "unset" ;
     outfname = "unset" ;
-    logf = "empty";
-    pathf = "empty";
-    matf = "empty";
+    logf = "unset";
+    pathf = "unset";
+    matf = "unset";
     gmfile = "/home/ccampbell/resources/genetic_map_HapMapII_GRCh37/genetic_map_GRCh37_chr22.txt.gz";
     n1 = 0; // set later
     n2 = 0; // set later
@@ -68,11 +70,20 @@ void parameters::read_parameters() {
         else if (in_str == "--highAccuracy") { highAccuracy = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--viterbi") { viterbi = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--matrixOutput") { matrixOutput = atoi( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--ref") { ref = get_arg(i+1).c_str(); i++; }
+        else if (in_str == "--admix") { admix = get_arg(i+1).c_str(); i++; }
         else
             error("Unknown option: " + string(in_str), 0);
         i++;
     }
-    if( outfname == "unset" ) { outfname = fname; }
+    if( ( outfname == "unset" ) && ( fname != "unset" ) ) { 
+        outfname = fname; 
+    } else if( ( admix == "unset" ) || ( ref == "unset" ) ) { 
+        cerr << "Both --admix and --ref must be set!" << endl;
+        exit(1);
+    } else if( ( outfname == "unset" ) && ( ref != "unset" ) ) { 
+        outfname = admix; 
+    }
     logf = outfname + ".log" + std::to_string(mode);
     pathf = outfname + ".path" + std::to_string(mode);
     matf = outfname + ".mat" + std::to_string(mode);
@@ -86,7 +97,12 @@ void parameters::print_params(ofstream &logfile, const int which) {
         if( mode == 1 ) { logfile << ". Full haplotype and gene conversion model." << endl; }
         if( mode == 2 ) { logfile << ". Two-pass model." << endl; }
         logfile << "I/O parameters set:" << endl;
-        logfile << "Input file: " << fname << "[(.sites|.locs|.hapnames)]" << endl;
+        if( fname != "unset" )
+            logfile << "Input file: " << fname << "[(.sites|.locs|.hapnames)]" << endl;
+        if( ref != "unset" )
+            logfile << "Reference input file: " << ref << "[(.sites|.locs|.hapnames)]" << endl;
+        if( admix != "unset" )
+            logfile << "Admix input file: " << admix << "[(.sites|.locs|.hapnames)]" << endl;
         logfile << "Log file: " << logf << endl;
         logfile << "Path file: " << pathf << endl;
         logfile << "Matrix output file: " << matf << endl;
