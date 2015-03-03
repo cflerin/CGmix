@@ -431,11 +431,7 @@ void backward(
     for(int f=0; f < bwd[0].size(); f++ ) {
         tmp[f] = bwd[0][f] + sprob[f]; // e already included within sprob...
     }
-    Pxb = 0.0;
-    for(int i=0; i<tmp.size(); i++ ) {
-        Pxb += exp( tmp[i] );
-    }
-    //logSumExp(tmp,Pxb);
+    logSumExp(tmp,Pxb,p.passAcc);
 }
 
 void backward2(
@@ -500,11 +496,7 @@ void backward2(
     for(int f=0; f < bwd[0].size(); f++ ) {
         tmp[f] = bwd[0][f] + sprob[f];
     }
-    Pxb = 0.0;
-    for(int i=0; i<tmp.size(); i++ ) {
-        Pxb += exp( tmp[i] );
-    }
-    //logSumExp(tmp,Pxb);
+    logSumExp( tmp, Pxb, p.passAcc );
 }
 
 void printMat( const vector<vector<double> > &mat ) {

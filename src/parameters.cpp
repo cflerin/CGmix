@@ -76,12 +76,12 @@ void parameters::read_parameters() {
             error("Unknown option: " + string(in_str), 0);
         i++;
     }
-    if( ( outfname == "unset" ) && ( fname != "unset" ) ) { 
+    if( ( fname != "unset" ) && ( outfname == "unset" ) ) { 
         outfname = fname; 
-    } else if( ( admix == "unset" ) || ( ref == "unset" ) ) { 
-        cerr << "Both --admix and --ref must be set!" << endl;
-        exit(1);
-    } else if( ( outfname == "unset" ) && ( ref != "unset" ) ) { 
+    //} else if( ( fname == "unset" ) && ( admix == "unset" ) || ( ref == "unset" ) ) { 
+    //    cerr << "Both --admix and --ref must be set!" << endl;
+    //    exit(1);
+    } else if( ( ref == "unset" ) && ( outfname == "unset" ) ) { 
         outfname = admix; 
     }
     logf = outfname + ".log" + std::to_string(mode);

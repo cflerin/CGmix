@@ -73,22 +73,8 @@ int main(int argc, char *argv[]) {
         obs.resize( sites.size(), 0.0 );
         for(int j=0; j < sites.size(); j++) {
             obs[j] = sites[j][ obsIndx[0] ];
-            cout << "before erase:" << sites[j].size() << endl;
             sites[j].erase(sites[j].begin()+ obsIndx[0] );
-            cout << "after erase:" << sites[j].size() << endl;
         }
-        /*
-        for(int i=0; i < hapInfo.hN.size(); i++) {
-            if( hapInfo.hapName[i] == "obs" ) {
-                for(int j=0; j < sites.size(); j++) {
-                    obs[j] = sites[j][i];
-                    cout << "before erase:" << sites[j].size() << endl;
-                    sites[j].erase(sites[j].begin()+i);
-                    cout << "after erase:" << sites[j].size() << endl;
-                }
-            }
-        }
-        */
     } else {
         // reference input:
         readTSites( param.ref + ".sites", sites );
@@ -113,6 +99,7 @@ int main(int argc, char *argv[]) {
 
         // read admixed haplotype:
         readAdmixSites( param.admix + ".sites", obs );
+        logfile << "Read " << obs.size() << " admixed sites" << endl;
     }
 
     geneticMap gMap;
@@ -176,28 +163,21 @@ int main(int argc, char *argv[]) {
         getsprob( sites[0], param, st, obs, sprob );
         param.passAcc = param.highAccuracy; // set to user-selected state
     }
+    double Pxa, Pxb;
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     forward( sites, pos, param, st, obs, sprob, fwd );
+    vector<double> fwdS = fwd[ fwd.size()-1 ];
+    logSumExp( fwdS, Pxa, param.passAcc );
 
-    double Pxa, Pxb;
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
     backward( sites, pos, param, st, obs, sprob, bwd, Pxb );
     //
-    //logSumExp( fwd[ fwd.size()-1 ], Pxa );
-    Pxa = 0.0;
-    for(int i=0; i<fwd[ fwd.size()-1 ].size(); i++ ) {
-        Pxa += exp( fwd[ fwd.size()-1 ][i] );
-    }
-    Pxa = log( Pxa );
-    Pxb = log( Pxb );
     logfile << setprecision(20) << "Pxa= " << Pxa << endl;
     logfile << setprecision(20) << "Pxb= " << Pxb << endl;
     logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
-    //if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
-        cout << "P(x) diff=" << Pxa - Pxb << endl;
-    //}
+    cout << "P(x) diff=" << Pxa - Pxb << endl;
 
     pathVec pvec( param );
 
@@ -248,7 +228,7 @@ int main(int argc, char *argv[]) {
     }
 
     ////////////////
-    if( param.fixPswitch > 0 ) { // testing only
+    if( param.fixPswitch >= 0 ) { // testing only
         std::fill( pvec.pswitch.begin(), pvec.pswitch.end(), 0 );
         for(int j=0; j < param.fixPswitch; j++) {
             pvec.pswitch[j] = 1;
@@ -310,23 +290,17 @@ int main(int argc, char *argv[]) {
 
         logfile << "Starting forward algorithm..." << endl;;
         forward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, fwd );
+        fwdS.resize( st2.states.size(), 0.0 );
+        fwdS = fwd[ fwd.size()-1 ];
+        logSumExp( fwdS, Pxa, param.passAcc );
 
         logfile << "Starting backward algorithm..." << endl;
         backward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, bwd, Pxb );
 
-        Pxa = 0.0;
-        for(int i=0; i<fwd[ fwd.size()-1 ].size(); i++ ) {
-            Pxa += exp( fwd[ fwd.size()-1 ][i] );
-        }
-        Pxa = log( Pxa );
-        Pxb = log( Pxb );
         logfile << setprecision(20) << "Pxa= " << Pxa << endl;
         logfile << setprecision(20) << "Pxb= " << Pxb << endl;
         logfile << "diff= " << Pxa - Pxb << endl;
-
-        //if( ( Pxa - Pxb ) > ( 4 * numeric_limits<double>::epsilon() ) ) {
-            cout << "P(x) diff=" << Pxa - Pxb << endl;
-        //}
+        cout << "P(x) diff=" << Pxa - Pxb << endl;
 
         logfile << "Starting posterior decoding..." << endl;
         pvec.pppath2.resize( sites.size() );
