@@ -256,67 +256,11 @@ inline double lookupGtrans(const int &to, const int &from, const double &d, cons
     return( trGbin[ type ] );
 }
 
-void forward( 
+void forward(
         const vector<vector<int> > &sites,
         const positions &pos,
         const parameters &p,
         const hmmStates &st,
-        const vector<int> &obs,
-        const vector<double> &sprob,
-        vector<vector<double> > &fwd ) {
-    double lsum, trX, trG, e, d, r;
-    vector<double> trXbin(6,99);
-    vector<double> trGbin(11,99);
-    vector<int> siteIndx;
-    vector<double> tmp( st.states.size() );
-    if( p.mode == 1 ) { // full model
-        siteIndx = st.Gindx;
-    } else { // reduced
-        siteIndx = st.Xindx;
-    }
-    // starting prob: 
-    fwd[0] = sprob;
-    for(int j=1; j < sites.size() ; j++ ) {
-        //d = dvec[j] - dvec[j-1];
-        d = pos.pos[j] - pos.pos[j-1];
-        r = pos.cM[j] - pos.cM[j-1];
-        for(int t=0; t < st.states.size(); t++) {
-            std::fill( tmp.begin(), tmp.end(), 0.0 );
-            for(int f=0; f < st.states.size(); f++) {
-                //trX = lookupXtrans( t, f, d, st, p, trXbin );
-                trX = lookupXtrans( t, f, d, r, st, p, trXbin );
-                if( p.mode == 1 ) {
-                    //trG = lookupGtrans( t, f, d, st, p, trGbin );
-                    trG = lookupGtrans( t, f, d, r, st, p, trGbin );
-                    tmp[f] = fwd[j-1][f] + trX + trG;
-                } else {
-                    tmp[f] = fwd[j-1][f] + trX;
-                }
-                //cout << "t= " << st.states[t] << " f= " << st.states[f] << " fwd[j-1][f]= " << fwd[j-1][f] << " trX= " << trX << endl;
-            } // end 'from' loop
-            if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
-            } else {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
-            }
-            //cout << "j=" << j << endl;
-            logSumExp( tmp, lsum, p.passAcc );
-            fwd[j][t] = e + lsum;
-            // cout << t << endl;
-        } // end 'to' loop
-        std::fill( trXbin.begin(), trXbin.end(), 99 );
-        std::fill( trGbin.begin(), trGbin.end(), 99 );
-    } // end j site loop
-}
-
-void forward2(
-        const vector<vector<int> > &sites,
-        const positions &pos,
-        const parameters &p,
-        const hmmStates &st,
-        const hmmStates &st2,
         const vector<int> &obs,
         const vector<double> &sprob,
         const vector<int> &pswitch,
@@ -337,18 +281,17 @@ void forward2(
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
-            siteIndx = st2.Gindx;
+            siteIndx = st.Gindx;
         }
         //cout << "fwd[j].size() = " << fwd[j].size() << endl;
         for(int t=0; t < fwd[j].size(); t++) {
             tmp.resize( fwd[j-1].size(), 0.0 );
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int f=0; f < fwd[j-1].size(); f++) {
-                //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
-                trX = lookupXtrans( t, f, d, r, st2, p, trXbin );
+                trX = lookupXtrans( t, f, d, r, st, p, trXbin );
                 if( ( pswitch[j] == 1 ) || ( pswitch[j-1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
-                    trG = lookupGtrans( t, f, d, r, st2, p, trGbin );
+                    trG = lookupGtrans( t, f, d, r, st, p, trGbin );
                     tmp[f] = fwd[j-1][f] + trX + trG;
                 } else {
                     //cout << "\ttrx" << endl;
@@ -356,11 +299,11 @@ void forward2(
                 }
             } // end 'from' loop
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st2.Xpop[t] == 1 ) { e = p.theta1_match; }
-                else if( st2.Xpop[t] == 2 ) { e = p.theta2_match; }
+                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
             } else {
-                if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                else if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
             }
             // cout << "j=" << j << endl;
             logSumExp( tmp, lsum, p.passAcc );
@@ -376,70 +319,6 @@ void backward(
         const positions &pos,
         const parameters &p,
         const hmmStates &st,
-        const vector<int> &obs,
-        const vector<double> &sprob,
-        vector<vector<double> > &bwd,
-        double &Pxb) {
-    double e, lsum, trX, trG, d, r;
-    // double negInf = - std::numeric_limits<double>::infinity();
-    // double log_eps = log(numeric_limits<double>::epsilon());
-    vector<double> trXbin(6,99);
-    vector<double> trGbin(11,99);
-    vector<int> siteIndx;
-    vector<double> tmp( st.states.size() );
-    if( p.mode == 1 ) { // full model
-        siteIndx = st.Gindx;
-    } else { // reduced
-        siteIndx = st.Xindx;
-    }
-    for(int j = sites.size()-2; j >= 0 ; j-- ) {
-        //d = dvec[j+1] - dvec[j];
-        d = pos.pos[j+1] - pos.pos[j];
-        r = pos.cM[j+1] - pos.cM[j];
-        for(int f=0; f < st.states.size(); f++ ) {
-            std::fill( tmp.begin(), tmp.end(), 0.0 );
-            for(int t=0; t < st.states.size(); t++ ) {
-                trX = lookupXtrans( t, f, d, r, st, p, trXbin);
-                //cout << "j= " << j << "\tf= " << f << "\tt= " << t;
-                if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                    else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
-                } else {
-                    if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                    else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
-                }
-                if( p.mode == 1 ) {
-                    trG = lookupGtrans( t, f, d, r, st, p, trGbin);
-                    //cout << "\ttrG= " << trG;
-                    tmp[t] = bwd[j+1][t] + trX + trG + e;
-                } else {
-                    tmp[t] = bwd[j+1][t] + trX + e;
-                    //cout << "\tbwd[j+1][t]= " << bwd[j+1][t] << "\ttrX= " << trX << "\te= " << e << "\ttmp[t]= " << tmp[t] ;
-                }
-                //cout << endl;
-            } // t loop
-            logSumExp( tmp, lsum, p.passAcc );
-            //cout << "j= " << j << "\tf= " << f << "\tlsum= " << lsum << endl << endl;
-            bwd[j][f] = lsum;
-        } // f loop
-        std::fill( trXbin.begin(), trXbin.end(), 99 );
-        std::fill( trGbin.begin(), trGbin.end(), 99 );
-    } // j loop
-    // termination
-    tmp.resize( bwd[0].size(), 0.0 );
-    std::fill( tmp.begin(), tmp.end(), 0.0 );
-    for(int f=0; f < bwd[0].size(); f++ ) {
-        tmp[f] = bwd[0][f] + sprob[f]; // e already included within sprob...
-    }
-    logSumExp(tmp,Pxb,p.passAcc);
-}
-
-void backward2(
-        const vector<vector<int> > &sites,
-        const positions &pos,
-        const parameters &p,
-        const hmmStates &st,
-        const hmmStates &st2,
         const vector<int> &obs,
         const vector<double> &sprob,
         const vector<int> &pswitch,
@@ -460,24 +339,23 @@ void backward2(
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
-            siteIndx = st2.Gindx;
+            siteIndx = st.Gindx;
         }
         for(int f=0; f < bwd[j].size(); f++ ) {
             tmp.resize( bwd[j+1].size(), 0.0 );
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int t=0; t < bwd[j+1].size(); t++ ) {
-                //cout << "t=" << t << " " << st2.states[t] << "\tf=" << f << " " << st2.states[f] ;
-                trX = lookupXtrans( t, f, d, r, st2, p, trXbin);
+                trX = lookupXtrans( t, f, d, r, st, p, trXbin);
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    if( st2.Xpop[t] == 1 ) { e = p.theta1_match; }
-                    else if( st2.Xpop[t] == 2 ) { e = p.theta2_match; }
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
+                    else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
                 } else {
-                    if( st2.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                    else if( st2.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                    if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
+                    else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
                 }
                 if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
-                    trG = lookupGtrans( t, f, d, r, st2, p, trGbin);
+                    trG = lookupGtrans( t, f, d, r, st, p, trGbin);
                     tmp[t] = bwd[j+1][t] + trX + trG + e ;
                 } else {
                     //cout << "\ttrx" << endl;

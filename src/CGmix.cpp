@@ -152,6 +152,7 @@ int main(int argc, char *argv[]) {
     //cout << "theta1 " << exp( param.theta1_match ) << "\t" << exp( param.theta1_mismatch ) << endl;
     //cout << "theta2 " << exp( param.theta2_match ) << "\t" << exp( param.theta2_mismatch ) << endl;
 
+    pathVec pvec( param );
     param.print_params(logfile, 1);
 
     logfile << "Starting forward algorithm..." << endl;;
@@ -162,24 +163,23 @@ int main(int argc, char *argv[]) {
     } else if( param.mode == 1 ) {
         getsprob( sites[0], param, st, obs, sprob );
         param.passAcc = param.highAccuracy; // set to user-selected state
+        std::fill( pvec.pswitch.begin(), pvec.pswitch.end(), 1 );
     }
     double Pxa, Pxb;
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
-    forward( sites, pos, param, st, obs, sprob, fwd );
+    forward( sites, pos, param, st, obs, sprob, pvec.pswitch, fwd );
     vector<double> fwdS = fwd[ fwd.size()-1 ];
     logSumExp( fwdS, Pxa, param.passAcc );
 
     logfile << "Starting backward algorithm..." << endl;
     vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
-    backward( sites, pos, param, st, obs, sprob, bwd, Pxb );
+    backward( sites, pos, param, st, obs, sprob, pvec.pswitch, bwd, Pxb );
     //
     logfile << setprecision(20) << "Pxa= " << Pxa << endl;
     logfile << setprecision(20) << "Pxb= " << Pxb << endl;
     logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
     cout << "P(x) diff=" << Pxa - Pxb << endl;
-
-    pathVec pvec( param );
 
     logfile << "Starting posterior decoding..." << endl;
     vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
@@ -289,13 +289,13 @@ int main(int argc, char *argv[]) {
         }
 
         logfile << "Starting forward algorithm..." << endl;;
-        forward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, fwd );
+        forward( sites, pos, param, st2, obs, sprob, pvec.pswitch, fwd );
         fwdS.resize( st2.states.size(), 0.0 );
         fwdS = fwd[ fwd.size()-1 ];
         logSumExp( fwdS, Pxa, param.passAcc );
 
         logfile << "Starting backward algorithm..." << endl;
-        backward2( sites, pos, param, st, st2, obs, sprob, pvec.pswitch, bwd, Pxb );
+        backward( sites, pos, param, st2, obs, sprob, pvec.pswitch, bwd, Pxb );
 
         logfile << setprecision(20) << "Pxa= " << Pxa << endl;
         logfile << setprecision(20) << "Pxb= " << Pxb << endl;

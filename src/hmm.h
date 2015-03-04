@@ -73,15 +73,6 @@ void forward(
         const hmmStates &st,
         const vector<int> &obs,
         const vector<double> &sprob,
-        vector<vector<double> > &fwd );
-void forward2( 
-        const vector<vector<int> > &sites,
-        const positions &pos,
-        const parameters &p,
-        const hmmStates &st,
-        const hmmStates &st2,
-        const vector<int> &obs,
-        const vector<double> &sprob,
         const vector<int> &pswitch,
         vector<vector<double> > &fwd );
 
@@ -90,16 +81,6 @@ void backward(
         const positions &pos,
         const parameters &p,
         const hmmStates &st,
-        const vector<int> &obs,
-        const vector<double> &sprob,
-        vector<vector<double> > &bwd,
-        double &Pxb );
-void backward2(
-        const vector<vector<int> > &sites,
-        const positions &pos,
-        const parameters &p,
-        const hmmStates &st,
-        const hmmStates &st2,
         const vector<int> &obs,
         const vector<double> &sprob,
         const vector<int> &pswitch,
