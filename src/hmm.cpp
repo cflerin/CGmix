@@ -116,10 +116,13 @@ void getsprob(
         const vector<int> &obs,
         vector<double> &sprob ) {
     double e;
-    //double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * (p.n1+p.n1) + p.gam * p.T) );
-    //double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * ( p.gam * p.T ) / ( ( p.n1 + p.n2 ) * ( p.lam * (p.n1 + p.n2 ) + p.gam * p.T ) ) );
-    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) );
-    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) );
+    double g = 1/100000.0 * p.f; // 1cM/Mb * f = 1Morgan/10000kb
+    double gam1 = 4 * p.Ne1 * g;
+    double gam2 = 4 * p.Ne2 * g;
+    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * 
+            ( p.lam * (p.n1+p.n2) ) / ( p.lam * (p.n1+p.n1) + (gam1/p.n1+gam2/p.n2)) );
+    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * 
+            (gam1/p.n1+gam2/p.n2) / ( (p.n1+p.n2) * ( p.lam * (p.n1+p.n2) + (gam1/p.n1+gam2/p.n2) )) );
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
             if( st.Xpop[i] == 1 ) { e = p.theta1_match; }
@@ -188,6 +191,7 @@ inline double lookupGtrans(const int &to, const int &from, const double &d, cons
         double pfrd4 = p.f * 4 * r / d;
         gam1 = pfrd4 * p.Ne1;
         gam2 = pfrd4 * p.Ne2;
+        //cout << "r=" << r << "\td=" << d << "\tgam1=" << gam1 << "\tgam2=" << gam2 << endl;
         //gam1 = p.f * ( 4.0 * p.Ne1 * (r/d) );
         //gam2 = p.f * ( 4.0 * p.Ne2 * (r/d) );
         //
