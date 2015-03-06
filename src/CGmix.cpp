@@ -192,23 +192,38 @@ int main(int argc, char *argv[]) {
         vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
         viterbi( sites, pos, param, st, obs, sprob, vit, pvec );
         //printMat( vit );
-        //for(int j=0; j<pvec.vpath.size();j++) {
-        //    cout << "j=" << j << "\tvpath=" << pvec.vpath[j] << endl;
-        //}
     } else {
         logfile << "Skipping Viterbi algorithm..." << endl;
     }
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
+        // find prob of cross-population switches in X chain:
+        for(int j=0; j < pprob.size(); j++ ) {
+            for(int i=0; i < pprob[j].size(); i++ ) {
+                if( st.Xpop[i] == 1 ) {
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st.Xpop[k] == 2 ) {
+                            pvec.X0probXpop[j] += pprob[j][i] * pprob[j][k];
+                        }
+                    }
+                } else if( st.Xpop[i] == 2 ) {
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st.Xpop[k] == 1 ) {
+                            pvec.X0probXpop[j] += pprob[j][i] * pprob[j][k];
+                        }
+                    }
+                }
+            }
+        }
         // find stretches/switches in viterbi path:
-        cout << "pvecVpath[0] = " << pvec.vpath[0] << endl;
+        //cout << "pvecVpath[0] = " << pvec.vpath[0] << endl;
         string prevHap = pvec.vpath[0];
         int prevCnt = 1;
         for(int j=1; j < param.S; j++ ) {
             if( pvec.vpath[j] != pvec.vpath[j-1] ) {
                 pvec.rleHap.push_back( prevHap );
                 pvec.rleCnt.push_back( prevCnt );
-                cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
+                //cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
                 prevHap = pvec.vpath[j];
                 prevCnt = 1;
             } else {
@@ -217,14 +232,14 @@ int main(int argc, char *argv[]) {
         }
         pvec.rleHap.push_back( prevHap );
         pvec.rleCnt.push_back( prevCnt );
-        cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
+        //cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
         // find stretches less than X sites, mark for follow-up
         int stepix = 0;
         int gcsens = 8; // how long a vpath stretch to consider for follow-up
         for(int i=0; i < pvec.rleHap.size(); i++ ) {
             if( pvec.rleCnt[i] <= gcsens ) {
                 for(int j=0; j < pvec.rleCnt[i]; j++ ) {
-                    cout << "pswitch ix: " << stepix+j << endl;
+                    //cout << "pswitch ix: " << stepix+j << endl;
                     pvec.pswitch[ stepix+j ] = 1;
                 }
             }
@@ -349,10 +364,6 @@ int main(int argc, char *argv[]) {
         logfile << "Starting path output" << endl;
         pvec.gcprob.resize( sites.size(), 0.0 );
         std::fill( pvec.gcprob.begin(), pvec.gcprob.end(), 0.0 );
-        pvec.gcprobPop1.resize( sites.size(), 0.0 );
-        std::fill( pvec.gcprobPop1.begin(), pvec.gcprobPop1.end(), 0.0 );
-        pvec.gcprobPop2.resize( sites.size(), 0.0 );
-        std::fill( pvec.gcprobPop2.begin(), pvec.gcprobPop2.end(), 0.0 );
         std::fill( pvec.transPGC.begin(), pvec.transPGC.end(), 0.0 );
         pathOutput( pvec, st2, pos, pprob, param, pathfile );
 

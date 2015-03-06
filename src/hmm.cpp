@@ -719,10 +719,8 @@ pathVec::pathVec( parameters param ) {
     vprob.resize( param.S, 0.0 );
 //
     gcprob.resize( param.S, 0.0 );
-    gcprobPop1.resize( param.S, 0.0 );
-    gcprobPop2.resize( param.S, 0.0 );
-    gcprobXPop.resize( param.S, 0.0 );
     transPGC.resize( param.S, 0.0 );
+    X0probXpop.resize( param.S, 0.0 );
 //
     if( param.mode == 2 ) {
         pppath2.resize( param.S );
@@ -734,63 +732,42 @@ pathVec::pathVec( parameters param ) {
 
 void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<double> > &pprob, parameters &param, ofstream &pathfile ) {
     if( ( param.mode == 1 ) || ( param.mode == 2 ) ) {
-        double pXi, pGk;
         // calculate total probability of a cross-population gene conversion:
-        for(int j=0; j < pprob.size(); j++ ) {
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                //if( st.Ghap[i] == 0 ) { continue; }
-                if( st.Xpop[i] == 1 ) {
-                    pXi = pprob[j][i];
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st.Gpop[k] == 2 ) {
-                            pGk = pprob[j][k];
-                            pvec.transPGC[j] += pXi * pGk;
-                        }
-                    }
-                }
-            }
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                //if( st.Ghap[i] == 0 ) { continue; }
-                if( st.Xpop[i] == 2 ) {
-                    pXi = pprob[j][i];
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st.Gpop[k] == 1 ) {
-                            pGk = pprob[j][k];
-                            pvec.transPGC[j] += pXi * pGk;
-                        }
-                    }
-                }
-            }
-        }
         for(int j=0; j < pprob.size(); j++ ) {
             for(int i=0; i < pprob[j].size(); i++ ) {
                 if( st.Ghap[i] != 0 ) { // gene conversion state
                     pvec.gcprob[j] += pprob[j][i];
-                    if( st.Gpop[i] == 1 ) {
-                        pvec.gcprobPop1[j] += pprob[j][i];
-                    } else if( st.Gpop[i] == 2 ) {
-                        pvec.gcprobPop2[j] += pprob[j][i];
+                }
+                if( st.Xpop[i] == 1 ) {
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st.Gpop[k] == 2 ) {
+                            pvec.transPGC[j] += pprob[j][i] * pprob[j][k];
+                        }
                     }
-                    if( ( st.Xpop[i]==1 && st.Gpop[i]==2 ) || ( st.Xpop[i]==2 && st.Gpop[i]==1 ) ) {
-                        // cross-population gene conversion
-                        pvec.gcprobXPop[j] += pprob[j][i];
+                } else if( st.Xpop[i] == 2 ) {
+                    for(int k=0; k < pprob[j].size(); k++ ) {
+                        if( st.Gpop[k] == 1 ) {
+                            pvec.transPGC[j] += pprob[j][i] * pprob[j][k];
+                        }
                     }
                 }
             }
         }
     } // endif
     // output path and probabilites:
-    pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\t";
+    pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tX0probXpop\t";
     if( param.mode == 2 ) 
         pathfile << "Vpath2\tVpathProb2\tPpath2\tPpathProb2\t";
-    pathfile << "GCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop" << endl;
+    // pathfile << "GCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop" << endl;
+    pathfile << "GCprob\tGCprobXPop" << endl;
     int intpos;
     for(int j=0; j < pprob.size(); j++ ) {
         intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
-        pathfile << j << "\t" << intpos << "\t" << pvec.vpath[j] << "\t" << exp(pvec.vprob[j]) << "\t" << pvec.pppath[j] << "\t" << pvec.ppprob[j] << "\t" << pvec.pswitch[j] << "\t";
+        pathfile << j << "\t" << intpos << "\t" << pvec.vpath[j] << "\t" << exp(pvec.vprob[j]) << "\t" << pvec.pppath[j] << "\t" << pvec.ppprob[j] << "\t" << pvec.pswitch[j] << "\t" << pvec.X0probXpop[j] << "\t" ;
         if( param.mode == 2 ) 
             pathfile << pvec.vpath2[j] << "\t" << exp(pvec.vprob2[j]) << "\t" << pvec.pppath2[j] << "\t" << pvec.ppprob2[j] << "\t";
-        pathfile << pvec.gcprob[j] << "\t" << pvec.gcprobPop1[j] << "\t" << pvec.gcprobPop2[j] << "\t" << pvec.gcprobXPop[j] << "\t" << pvec.transPGC[j] << endl;
+        // pathfile << pvec.gcprob[j] << "\t" << pvec.gcprobPop1[j] << "\t" << pvec.gcprobPop2[j] << "\t" << pvec.gcprobXPop[j] << "\t" << pvec.transPGC[j] << endl;
+        pathfile << pvec.gcprob[j] << "\t" << pvec.transPGC[j] << endl;
     }
 }
 
