@@ -36,8 +36,8 @@ class pathVec
     public:
         pathVec( parameters param );
         ~pathVec(){};
-        vector<int> pswitch;
-        vector<string> vpath, pppath, pppath2;
+        vector<int> pswitch, rleCnt;
+        vector<string> vpath, pppath, pppath2, rleHap;
         vector<double> vprob, gcprob, gcprobPop1, gcprobPop2, ppprob, gcprobXPop, transPGC;
         //
         vector<double> ppprob2, vprob2;

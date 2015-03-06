@@ -187,27 +187,55 @@ int main(int argc, char *argv[]) {
     postDecode( fwd, bwd, st, Pxa, pprob, pvec.pppath, pvec.ppprob, logfile);
 
     vector<vector<double> > vit;
-    if( param.viterbi == 1 ) {
+    if( ( param.mode == 0 ) || (param.mode == 2 ) || ( param.viterbi == 1 ) ) {
         logfile << "Starting Viterbi algorithm..." << endl;
         vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
         viterbi( sites, pos, param, st, obs, sprob, vit, pvec );
-        // printMat( vit );
+        //printMat( vit );
+        //for(int j=0; j<pvec.vpath.size();j++) {
+        //    cout << "j=" << j << "\tvpath=" << pvec.vpath[j] << endl;
+        //}
     } else {
         logfile << "Skipping Viterbi algorithm..." << endl;
     }
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
-        // find haplotype switches:
+        // find stretches/switches in viterbi path:
+        cout << "pvecVpath[0] = " << pvec.vpath[0] << endl;
+        string prevHap = pvec.vpath[0];
+        int prevCnt = 1;
         for(int j=1; j < param.S; j++ ) {
-            if( pvec.pppath[j] != pvec.pppath[j-1] )
-                pvec.pswitch[j] = 1;
+            if( pvec.vpath[j] != pvec.vpath[j-1] ) {
+                pvec.rleHap.push_back( prevHap );
+                pvec.rleCnt.push_back( prevCnt );
+                cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
+                prevHap = pvec.vpath[j];
+                prevCnt = 1;
+            } else {
+                prevCnt += 1;
+            }
+        }
+        pvec.rleHap.push_back( prevHap );
+        pvec.rleCnt.push_back( prevCnt );
+        cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
+        // find stretches less than X sites, mark for follow-up
+        int stepix = 0;
+        int gcsens = 8; // how long a vpath stretch to consider for follow-up
+        for(int i=0; i < pvec.rleHap.size(); i++ ) {
+            if( pvec.rleCnt[i] <= gcsens ) {
+                for(int j=0; j < pvec.rleCnt[i]; j++ ) {
+                    cout << "pswitch ix: " << stepix+j << endl;
+                    pvec.pswitch[ stepix+j ] = 1;
+                }
+            }
+            stepix += pvec.rleCnt[i];
         }
         vector<int> swIx;
         for(int j=0; j < param.S; j++ ) {
             if( pvec.pswitch[j] == 1 )
                 swIx.push_back( j );
         }
-        int width = 10; 
+        int width = 5; // how much to expand on each side of switch marks
         // expand marks around switches:
         vector<int> repl(2);
         for(int j=0; j < swIx.size(); j++) {
