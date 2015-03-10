@@ -38,6 +38,8 @@ parameters::parameters(int argc, char *argv[]) {
     highAccuracy = 0;
     viterbi = 0;
     matrixOutput = 0;
+    gcsens = 7;
+    width = 3;
 }
 
 string parameters::get_arg(unsigned int i) {
@@ -63,6 +65,9 @@ void parameters::read_parameters() {
         else if (in_str == "--mode") { mode = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--T") { T = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--u1") { u1 = atof( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--Ne1") { Ne1 = atof( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--Ne2") { Ne2 = atof( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--f") { f = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--lam") { lam = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta1") { theta1 = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--theta2") { theta2 = atof( get_arg(i+1).c_str() ); i++; }
@@ -72,6 +77,8 @@ void parameters::read_parameters() {
         else if (in_str == "--matrixOutput") { matrixOutput = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--ref") { ref = get_arg(i+1).c_str(); i++; }
         else if (in_str == "--admix") { admix = get_arg(i+1).c_str(); i++; }
+        else if (in_str == "--gcsens") { gcsens = atoi( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--width") { width = atoi( get_arg(i+1).c_str() ); i++; }
         else
             error("Unknown option: " + string(in_str), 0);
         i++;
@@ -92,6 +99,7 @@ void parameters::read_parameters() {
 
 void parameters::print_params(ofstream &logfile, const int which) {
     if( which == 0 ) {
+        logfile << "CGmix: Crossover and Gene converion detection in admixed populations." << endl;
         logfile << "Mode " << mode;
         if( mode == 0 ) { logfile << ". Haplotype-only model." << endl; }
         if( mode == 1 ) { logfile << ". Full haplotype and gene conversion model." << endl; }
@@ -105,7 +113,18 @@ void parameters::print_params(ofstream &logfile, const int which) {
             logfile << "Admix input file: " << admix << "[(.sites|.locs|.hapnames)]" << endl;
         logfile << "Log file: " << logf << endl;
         logfile << "Path file: " << pathf << endl;
-        logfile << "Matrix output file: " << matf << endl;
+        logfile << "Matrix output file: ";
+        if( matrixOutput == 1 ) { 
+            logfile << matf << endl;
+        } else {
+            logfile << "NA" << endl;
+        }
+        logfile << "Viterbi decoding: ";
+        if( viterbi == 1 ) {
+            logfile << "on" << endl;
+        } else {
+            logfile << "off" << endl;
+        }
     }
     if( which == 1 ) {
         //
@@ -117,9 +136,14 @@ void parameters::print_params(ofstream &logfile, const int which) {
         logfile << "u1 = " << u1 << endl;
         logfile << "Ne1 = " << Ne1 << endl;
         logfile << "Ne2 = " << Ne2 << endl;
+        logfile << "f = " << f << endl;
         logfile << "lambda = " << lam << endl;
         logfile << "theta1 = " << theta1 << endl;
         logfile << "theta2 = " << theta2 << endl;
+        logfile << "fixPswitch = " << fixPswitch << endl;
+        logfile << "highAccuracy = " << highAccuracy << endl;
+        logfile << "GCsensitivity = " << gcsens << endl;
+        logfile << "Expansion width = " << width << endl;
     }
 
 

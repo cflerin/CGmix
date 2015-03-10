@@ -37,8 +37,8 @@ class pathVec
         pathVec( parameters param );
         ~pathVec(){};
         vector<int> pswitch, rleCnt;
-        vector<string> vpath, pppath, pppath2, rleHap;
-        vector<double> vprob, gcprob, ppprob, transPGC, X0probXpop;
+        vector<string> vpath, pppath, pppath2, rleHap, rlePrevPop, vpathPop;
+        vector<double> vprob, gcprob, ppprob, transPGC;
         //
         vector<double> ppprob2, vprob2;
         vector<int> pswitch2;
@@ -124,6 +124,9 @@ void viterbi2(
 void max( const vector<double> &vec, double maxelement );
 
 void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<double> > &pprob, parameters &param, ofstream &pathfile );
+
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
+std::vector<std::string> split(const std::string &s, char delim);
 
 #endif
 

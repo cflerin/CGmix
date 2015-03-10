@@ -738,7 +738,6 @@ pathVec::pathVec( parameters param ) {
 //
     gcprob.resize( param.S, 0.0 );
     transPGC.resize( param.S, 0.0 );
-    X0probXpop.resize( param.S, 0.0 );
 //
     if( param.mode == 2 ) {
         pppath2.resize( param.S );
@@ -773,7 +772,7 @@ void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<dou
         }
     } // endif
     // output path and probabilites:
-    pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tX0probXpop\t";
+    pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\t";
     if( param.mode == 2 ) 
         pathfile << "Vpath2\tVpathProb2\tPpath2\tPpathProb2\t";
     // pathfile << "GCprob\tGCprobP1\tGCprobP2\tGCprobXPop0\tGCprobXPop" << endl;
@@ -781,11 +780,25 @@ void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<dou
     int intpos;
     for(int j=0; j < pprob.size(); j++ ) {
         intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
-        pathfile << j << "\t" << intpos << "\t" << pvec.vpath[j] << "\t" << exp(pvec.vprob[j]) << "\t" << pvec.pppath[j] << "\t" << pvec.ppprob[j] << "\t" << pvec.pswitch[j] << "\t" << pvec.X0probXpop[j] << "\t" ;
+        pathfile << j << "\t" << intpos << "\t" << pvec.vpath[j] << "\t" << exp(pvec.vprob[j]) << "\t" << pvec.pppath[j] << "\t" << pvec.ppprob[j] << "\t" << pvec.pswitch[j] << "\t" ;
         if( param.mode == 2 ) 
             pathfile << pvec.vpath2[j] << "\t" << exp(pvec.vprob2[j]) << "\t" << pvec.pppath2[j] << "\t" << pvec.ppprob2[j] << "\t";
         // pathfile << pvec.gcprob[j] << "\t" << pvec.gcprobPop1[j] << "\t" << pvec.gcprobPop2[j] << "\t" << pvec.gcprobXPop[j] << "\t" << pvec.transPGC[j] << endl;
         pathfile << pvec.gcprob[j] << "\t" << pvec.transPGC[j] << endl;
     }
+}
+
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, elems);
+    return elems;
 }
 

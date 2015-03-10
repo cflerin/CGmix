@@ -197,34 +197,20 @@ int main(int argc, char *argv[]) {
     }
 
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
-        // find prob of cross-population switches in X chain:
-        for(int j=0; j < pprob.size(); j++ ) {
-            for(int i=0; i < pprob[j].size(); i++ ) {
-                if( st.Xpop[i] == 1 ) {
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st.Xpop[k] == 2 ) {
-                            pvec.X0probXpop[j] += pprob[j][i] * pprob[j][k];
-                        }
-                    }
-                } else if( st.Xpop[i] == 2 ) {
-                    for(int k=0; k < pprob[j].size(); k++ ) {
-                        if( st.Xpop[k] == 1 ) {
-                            pvec.X0probXpop[j] += pprob[j][i] * pprob[j][k];
-                        }
-                    }
-                }
-            }
-        }
         // find stretches/switches in viterbi path:
-        //cout << "pvecVpath[0] = " << pvec.vpath[0] << endl;
         string prevHap = pvec.vpath[0];
         int prevCnt = 1;
+        vector<string> elem = split( prevHap, '-' );
+        string prevPop = elem[0];
         for(int j=1; j < param.S; j++ ) {
             if( pvec.vpath[j] != pvec.vpath[j-1] ) {
                 pvec.rleHap.push_back( prevHap );
                 pvec.rleCnt.push_back( prevCnt );
-                //cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
+                pvec.rlePrevPop.push_back( prevPop );
+                //cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << "\trlePop=" << elem[0] << endl;
                 prevHap = pvec.vpath[j];
+                elem = split( prevHap, '-' );
+                prevPop = elem[0];
                 prevCnt = 1;
             } else {
                 prevCnt += 1;
@@ -232,12 +218,34 @@ int main(int argc, char *argv[]) {
         }
         pvec.rleHap.push_back( prevHap );
         pvec.rleCnt.push_back( prevCnt );
-        //cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << endl;
+        pvec.rlePrevPop.push_back( prevPop );
+        //cout << "rleHap=" << prevHap << "\trleCnt=" << prevCnt << "\trlePop=" << elem[0] << endl;
+        // find cross popultation "islands":
+        vector<int> island;
+        if( pvec.rlePrevPop[0] != pvec.rlePrevPop[1] ) {
+            island.push_back( 1 );
+        } else {
+            island.push_back( 0 );
+        }
+        for(int i=1; i < pvec.rleHap.size() - 1; i++) {
+            if( ( pvec.rlePrevPop[i-1] != pvec.rlePrevPop[i] ) || ( pvec.rlePrevPop[i+1] != pvec.rlePrevPop[i] ) ) {
+                island.push_back( 1 );
+            } else {
+                island.push_back( 0 );
+            }
+        }
+        int l = pvec.rleHap.size() - 1;
+        if( pvec.rlePrevPop[ l ] != pvec.rlePrevPop[ l-1 ] ) {
+            island.push_back( 1 );
+        } else {
+            island.push_back( 0 );
+        }
         // find stretches less than X sites, mark for follow-up
         int stepix = 0;
-        int gcsens = 8; // how long a vpath stretch to consider for follow-up
+        //int gcsens = 8; // how long a vpath stretch to consider for follow-up
         for(int i=0; i < pvec.rleHap.size(); i++ ) {
-            if( pvec.rleCnt[i] <= gcsens ) {
+            //cout << "rleHap=" << pvec.rleHap[i] << "\trleCnt=" << pvec.rleCnt[i] << "\trlePop=" << pvec.rlePrevPop[i] << "\tisland=" << island[i] << endl;
+            if( ( pvec.rleCnt[i] <= param.gcsens ) && ( island[i] == 1 ) ) {
                 for(int j=0; j < pvec.rleCnt[i]; j++ ) {
                     //cout << "pswitch ix: " << stepix+j << endl;
                     pvec.pswitch[ stepix+j ] = 1;
@@ -250,12 +258,12 @@ int main(int argc, char *argv[]) {
             if( pvec.pswitch[j] == 1 )
                 swIx.push_back( j );
         }
-        int width = 5; // how much to expand on each side of switch marks
+        //int width = 5; // how much to expand on each side of switch marks
         // expand marks around switches:
         vector<int> repl(2);
         for(int j=0; j < swIx.size(); j++) {
-            repl[0] = swIx[j] - width;
-            repl[1] = swIx[j] + width;
+            repl[0] = swIx[j] - param.width;
+            repl[1] = swIx[j] + param.width;
             if( repl[0] < 0 )
                 repl[0] = 0;
             if( repl[1] > (param.S-1) )
@@ -263,6 +271,7 @@ int main(int argc, char *argv[]) {
             for(int k=repl[0]; k <= repl[1]; k++ )
                 pvec.pswitch[k] = 1;
         }
+        // for(int i=0; i<pvec.pswitch.size(); i++) { if( pvec.pswitch[i] == 1 ) cout << i << " "; } cout << endl;
     }
 
     if( ( param.mode == 0 ) || ( param.mode == 1 ) ) {
