@@ -12,6 +12,7 @@ using namespace std;
 void generateStates(const hapDef &hapInfo, hmmStates &st ) {
     int nrow = hapInfo.hN.size() ; // - 1 ;
     // G null states:
+    vector<string> hapNamesG, hapNamesX, hapPopG, hapPopX;
     for (int j=0; j < nrow; j++) { 
         // cout << hapInfo[j][0] << "\t" << hapInfo[j][1] << "\t" << "0" << "\t" << "0" << "\t" << endl;
         st.Xhap.push_back( hapInfo.hN[j] );
@@ -20,6 +21,11 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
         st.Ghap.push_back( 0 );
         st.Gpop.push_back( 0 );
         st.Gindx.push_back( j ); // check if this is right
+        // keep original naming scheme:
+        hapNamesG.push_back( "0" );
+        hapPopG.push_back( "0" );
+        hapNamesX.push_back( hapInfo.hapName[j] );
+        hapPopX.push_back( hapInfo.hapPop[j] );
     }
     // All combinations of X and G:
     for(int i=0; i < nrow; i++) {
@@ -31,6 +37,11 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
             st.Ghap.push_back( hapInfo.hN[i] );
             st.Gpop.push_back( hapInfo.hP[i] );
             st.Gindx.push_back( i );
+            // keep original naming scheme:
+            hapNamesG.push_back( hapInfo.hapName[i] );
+            hapPopG.push_back( hapInfo.hapPop[i] );
+            hapNamesX.push_back( hapInfo.hapName[j] );
+            hapPopX.push_back( hapInfo.hapPop[j] );
         }
     }
     // state concatenation:
@@ -38,7 +49,8 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
     //cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates" << endl;
     for(int i=0; i < nrow; i++) {
         string tmp;
-        tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]) + "-" + std::to_string(st.Gpop[i]) + "-" + std::to_string(st.Ghap[i]);
+        // tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]) + "-" + std::to_string(st.Gpop[i]) + "-" + std::to_string(st.Ghap[i]);
+        tmp = hapPopX[i] + "-" + hapNamesX[i] + "-" + hapPopG[i] + "-" + hapNamesG[i];
         //tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
         st.states.push_back( tmp );
         //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
@@ -49,19 +61,25 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
 void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
     int nrow = hapInfo.hN.size() ; // - 1 ;
     // Haplotype states only:
+    vector<string> hapNames, hapPop;
     for (int j=0; j < nrow; j++) {
         // cout << hapInfo[j][0] << "\t" << hapInfo[j][1] << "\t" << hapInfo[i][0] << "\t" << hapInfo[i][1] << "\t" << endl;
         st.Xhap.push_back( hapInfo.hN[j] );
         st.Xpop.push_back( hapInfo.hP[j] );
         st.Xindx.push_back( j );
         st.Ghap.push_back( 0 ); // fill this vector with null GC states
+        // keep original naming scheme:
+        hapNames.push_back( hapInfo.hapName[j] );
+        hapPop.push_back( hapInfo.hapPop[j] );
+
     }
     // state concatenation:
     nrow = st.Xhap.size();
     //cout << "i\tXhap\tXpop\tXindx\tGhap\tstates" << endl;
+    string tmp;
     for(int i=0; i < nrow; i++) {
-        string tmp;
-        tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]);
+        // tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]);
+        tmp = hapPop[i] + "-" + hapNames[i];
         st.states.push_back( tmp );
         //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.states[i] << endl;
         //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.Ghap[i] << "\t" << st.states[i] << endl;
