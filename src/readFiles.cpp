@@ -240,7 +240,7 @@ void readAdmixSites(const string &fname, vector<int> &locs ) {
             if( line == "" )
                 continue;
             stringstream ss(line);
-            int f = 0.0;
+            int f = 0;
             ss >> f;
             locs.push_back(f);
         }
@@ -278,3 +278,4 @@ void readTSites(const string &fname, vector<vector<int> > &sites ) {
     } else
         cout << "Failed to open sites file: " << fname << endl;
 }
+

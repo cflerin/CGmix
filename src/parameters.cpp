@@ -27,7 +27,7 @@ parameters::parameters(int argc, char *argv[]) {
     n2 = 0; // set later
     S = 0; // set later
     T = 7.0;
-    u1 = 0.5;
+    u1 = 0.8;
     Ne1 = 10000;
     Ne2 = 18000;
     f = 10.0; // scaling factor for g ( f=gamma/rho, g=f*r, and gamma=4*Ne*g )
@@ -88,7 +88,7 @@ void parameters::read_parameters() {
     //} else if( ( fname == "unset" ) && ( admix == "unset" ) || ( ref == "unset" ) ) { 
     //    cerr << "Both --admix and --ref must be set!" << endl;
     //    exit(1);
-    } else if( ( ref == "unset" ) && ( outfname == "unset" ) ) { 
+    } else if( ( ( admix != "unset" ) && ( ref != "unset" ) ) && ( outfname == "unset" ) ) { 
         outfname = admix; 
     }
     logf = outfname + ".log" + std::to_string(mode);
