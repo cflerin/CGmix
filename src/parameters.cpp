@@ -111,6 +111,7 @@ void parameters::print_params(ofstream &logfile, const int which) {
             logfile << "Reference input file: " << ref << "[(.sites|.locs|.hapnames)]" << endl;
         if( admix != "unset" )
             logfile << "Admix input file: " << admix << "[(.sites|.locs|.hapnames)]" << endl;
+        logfile << "Genetic map: " << gmfile << endl;
         logfile << "Log file: " << logf << endl;
         logfile << "Path file: " << pathf << endl;
         logfile << "Matrix output file: ";

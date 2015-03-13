@@ -2,7 +2,7 @@ CPP = clang++ # g++
 EXECUTABLE = CGmix
 
 CFLAGS = -Wall -O3 -m64
-CPPFLAGS = -O3 -D_FILE_OFFSET_BITS=64 -std=c++11
+CPPFLAGS = -O3 -D_FILE_OFFSET_BITS=64 -std=c++11 #-static-libstdc++
 LIB = -lz 
 
 BIN = bin
