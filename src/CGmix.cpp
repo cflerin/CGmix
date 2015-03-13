@@ -15,18 +15,17 @@ int main(int argc, char *argv[]) {
 //    params.print_help();
     param.read_parameters();
 
-    if( param.fname == "empty" ) {
-        cout << "Input file not set" << endl;
+    if( param.fname == "empty"  ) {
+        cerr << "Input file not set" << endl;
         exit(1);
     }
     if( param.mode == 99 ) {
-        cout << "Mode must be 0, 1 or 2" << endl;
+        cerr << "Mode must be 0, 1, 2, or 3" << endl;
         exit(1);
     }
 
     ofstream logfile ( param.logf.c_str() );
     ofstream pathfile ( param.pathf.c_str() );
-    //ofstream matfile;
 
     param.print_params(logfile, 0);
     logfile << endl;
@@ -67,7 +66,7 @@ int main(int argc, char *argv[]) {
         //logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
 
         if( obsIndx.size() > 1 ) {
-            cout << "Too many p3 haplotypes!" << endl;
+            cerr << "Too many p3 haplotypes!" << endl;
             exit(1);
         }
         obs.resize( sites.size(), 0.0 );
@@ -131,7 +130,7 @@ int main(int argc, char *argv[]) {
     param.u2 = 1.0 - param.u1;
 
     hmmStates st;
-    if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
+    if( ( param.mode == 0 ) || ( param.mode == 2 ) || ( param.mode == 3 ) ) {
         generateXstates( hapInfo, st );
         // set theta to ~0 for reduced first pass:
         param.theta1 = numeric_limits<double>::epsilon();
@@ -149,14 +148,23 @@ int main(int argc, char *argv[]) {
     param.theta1_mismatch = log( param.theta1 );
     param.theta2_match = log( 1.0 - param.theta2 );
     param.theta2_mismatch = log( param.theta2 );
-    //cout << "theta1 " << exp( param.theta1_match ) << "\t" << exp( param.theta1_mismatch ) << endl;
-    //cout << "theta2 " << exp( param.theta2_match ) << "\t" << exp( param.theta2_mismatch ) << endl;
 
     pathVec pvec( param );
     param.print_params(logfile, 1);
 
-    logfile << "Starting forward algorithm..." << endl;;
+    // declare all hmm variables:
     vector<double> sprob( st.states.size(), 0 );
+    double Pxa, Pxb;
+    vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
+    vector<double> fwdS;
+    vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
+    vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
+    vector<vector<double> > vit;
+
+    //////////////////////////
+    if( param.mode != 3 ) { 
+    //////////////////////////
+
     if( ( param.mode == 0 ) || ( param.mode == 2 ) ) {
         getsprobX( sites[0], param, st, obs, sprob );
         param.passAcc = 1; // force LSE sort on first pass
@@ -165,28 +173,25 @@ int main(int argc, char *argv[]) {
         param.passAcc = param.highAccuracy; // set to user-selected state
         std::fill( pvec.pswitch.begin(), pvec.pswitch.end(), 1 );
     }
-    double Pxa, Pxb;
-    vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
+
+    logfile << "Starting forward algorithm..." << endl;;
     forward( sites, pos, param, st, obs, sprob, pvec.pswitch, fwd );
-    vector<double> fwdS = fwd[ fwd.size()-1 ];
+    fwdS = fwd[ fwd.size()-1 ];
     logSumExp( fwdS, Pxa, param.passAcc );
 
     logfile << "Starting backward algorithm..." << endl;
-    vector<vector<double> > bwd(param.S, vector<double>(st.states.size(), 0.0));
     backward( sites, pos, param, st, obs, sprob, pvec.pswitch, bwd, Pxb );
     //
     logfile << setprecision(20) << "Pxa= " << Pxa << endl;
     logfile << setprecision(20) << "Pxb= " << Pxb << endl;
     logfile << "diff= " << Pxa - Pxb << endl;
     // printMat( bwd );
-    cout << "P(x) diff=" << Pxa - Pxb << endl;
+    // cout << "P(x) diff=" << Pxa - Pxb << endl;
 
     logfile << "Starting posterior decoding..." << endl;
-    vector<vector<double> > pprob(param.S, vector<double>(st.states.size(), 0.0));
     //postDecode( fwd, bwd, st, Pxa, pprob, pvec, logfile);
     postDecode( fwd, bwd, st, Pxa, pprob, pvec.pppath, pvec.ppprob, logfile);
 
-    vector<vector<double> > vit;
     if( ( param.mode == 0 ) || (param.mode == 2 ) || ( param.viterbi == 1 ) ) {
         logfile << "Starting Viterbi algorithm..." << endl;
         vector<vector<double> > vit(param.S, vector<double>(st.states.size(), 0.0));
@@ -279,6 +284,15 @@ int main(int argc, char *argv[]) {
         pathOutput( pvec, st, pos, pprob, param, pathfile );
     }
 
+    //////////////////////////
+    } else { // end skip block for mode 3
+    //////////////////////////
+        // read previous path file
+        string pathf0 = param.outfname + ".path0";
+        readPath( pathf0, pvec );
+        logfile << "Read first-pass results from " << pathf0 << endl;
+    }
+
     ////////////////
     if( param.fixPswitch >= 0 ) { // testing only
         std::fill( pvec.pswitch.begin(), pvec.pswitch.end(), 0 );
@@ -289,7 +303,7 @@ int main(int argc, char *argv[]) {
     ////////////////
 
     // restart hmm:
-    if( param.mode == 2 ) {
+    if( ( param.mode == 2 ) || ( param.mode == 3 ) ) {
         logfile.precision (ss);
         logfile << endl << "Restart hmm" << endl;
         // set theta to for full model:
@@ -342,7 +356,7 @@ int main(int argc, char *argv[]) {
 
         logfile << "Starting forward algorithm..." << endl;;
         forward( sites, pos, param, st2, obs, sprob, pvec.pswitch, fwd );
-        fwdS.resize( st2.states.size(), 0.0 );
+        fwdS.resize( fwd[fwd.size()-1].size() , 0.0 );
         fwdS = fwd[ fwd.size()-1 ];
         logSumExp( fwdS, Pxa, param.passAcc );
 
@@ -352,7 +366,7 @@ int main(int argc, char *argv[]) {
         logfile << setprecision(20) << "Pxa= " << Pxa << endl;
         logfile << setprecision(20) << "Pxb= " << Pxb << endl;
         logfile << "diff= " << Pxa - Pxb << endl;
-        cout << "P(x) diff=" << Pxa - Pxb << endl;
+        // cout << "P(x) diff=" << Pxa - Pxb << endl;
 
         logfile << "Starting posterior decoding..." << endl;
         pvec.pppath2.resize( sites.size() );

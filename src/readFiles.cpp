@@ -279,3 +279,36 @@ void readTSites(const string &fname, vector<vector<int> > &sites ) {
         cout << "Failed to open sites file: " << fname << endl;
 }
 
+void readPath(const string &fname, pathVec &pvec ) {
+    ifstream file ( fname.c_str() );
+    int cnt = 0;
+    if (file.is_open()) {
+        while (file.good()) {
+            vector<string> row;
+            string line;
+            getline(file, line);
+            if( line == "" )
+                continue;
+            stringstream ss(line);
+            string field;
+            while( getline(ss, field, '\t')) {
+                stringstream fs(field);
+                string f = "";
+                fs >> f;
+                row.push_back(f);
+            }
+            if( row[0] == "site" )
+                continue;
+            pvec.vpath[ cnt ] = row[2];
+            pvec.vprob[ cnt ] = atof( row[3].c_str() );
+            pvec.pppath[ cnt ] = row[4];
+            pvec.ppprob[ cnt ] = atof( row[5].c_str() );
+            pvec.pswitch[ cnt ] = atoi( row[6].c_str() );
+            // cout << pvec.vpath[cnt] << "\t" << pvec.vprob[cnt] << "\t" << pvec.pppath[cnt] << "\t" << pvec.ppprob[cnt] << "\t" << pvec.pswitch[cnt] << endl;
+            cnt++;
+        }
+        file.close();
+    } else
+        cout << "Failed to open path0 file: " << fname << endl;
+}
+

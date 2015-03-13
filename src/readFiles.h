@@ -8,6 +8,8 @@
 #ifndef READFILES_H_
 #define READFILES_H_
 
+class pathVec;
+
 #include <vector>
 //#include <string>
 #include <iostream>
@@ -17,6 +19,7 @@
 //#include <stdio.h>
 #include <cstring>
 #include <limits>
+#include "hmm.h"
 
 using namespace std;
 
@@ -58,6 +61,7 @@ void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions 
 
 void readAdmixSites(const string &fname, vector<int> &locs );
 void readTSites(const string &fname, vector<vector<int> > &sites );
+void readPath(const string &fname, pathVec &pvec );
 
 #endif
 

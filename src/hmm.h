@@ -8,6 +8,9 @@
 #ifndef HMM_H_
 #define HMM_H_
 
+class hapDef;
+class positions;
+
 #include <algorithm>
 #include <vector>
 #include <string>

@@ -104,6 +104,7 @@ void parameters::print_params(ofstream &logfile, const int which) {
         if( mode == 0 ) { logfile << ". Haplotype-only model." << endl; }
         if( mode == 1 ) { logfile << ". Full haplotype and gene conversion model." << endl; }
         if( mode == 2 ) { logfile << ". Two-pass model." << endl; }
+        if( mode == 3 ) { logfile << ". Second-pass model (requires output from mode 0).." << endl; }
         logfile << "I/O parameters set:" << endl;
         if( fname != "unset" )
             logfile << "Input file: " << fname << "[(.sites|.locs|.hapnames)]" << endl;
