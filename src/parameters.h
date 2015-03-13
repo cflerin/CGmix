@@ -52,6 +52,7 @@ class parameters
         int matrixOutput; // whether to output full forward/backward/posterior matrices
         int gcsens; // when tagging sites for full model, how long (maximum) a stretch in the viterbi path we will take.
         int width; // when tagging sites for full model,  how many sites to expand on each side of a potential GC site.
+        string pathfile;
 
         parameters(int argc, char *argv[]);
         ~parameters(){};

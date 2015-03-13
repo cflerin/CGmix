@@ -79,6 +79,7 @@ void parameters::read_parameters() {
         else if (in_str == "--admix") { admix = get_arg(i+1).c_str(); i++; }
         else if (in_str == "--gcsens") { gcsens = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--width") { width = atoi( get_arg(i+1).c_str() ); i++; }
+        else if (in_str == "--pathfile") { pathfile = get_arg(i+1).c_str(); i++; }
         else
             error("Unknown option: " + string(in_str), 0);
         i++;

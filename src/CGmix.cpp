@@ -288,9 +288,9 @@ int main(int argc, char *argv[]) {
     } else { // end skip block for mode 3
     //////////////////////////
         // read previous path file
-        string pathf0 = param.outfname + ".path0";
-        readPath( pathf0, pvec );
-        logfile << "Read first-pass results from " << pathf0 << endl;
+        // string pathf0 = param.outfname + ".path0";
+        readPath( param.pathfile, pvec );
+        logfile << "Read first-pass results from " << param.pathfile << endl;
     }
 
     ////////////////
