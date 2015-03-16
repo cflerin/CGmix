@@ -195,9 +195,16 @@ void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions 
     unsigned int jstart = 0;
     double x, tmp, yj;
     vector<int> flank(2), flankix(2);
+    double xmax = *max_element(gMap.pos.begin(), gMap.pos.end());
+    double xmin = *min_element(gMap.pos.begin(), gMap.pos.end());
     for(int i=0; i < locs.size(); i++ ) {
         yj = -1.0;
         x = locs[i];
+        pos.pos[i] = locs[i];
+        if( ( x < xmin ) || ( x > xmax ) ) { // return nan if out of range
+            pos.cM[i] = std::numeric_limits<double>::quiet_NaN();
+            continue;
+        }
         flank[0] =   std::numeric_limits<int>::max();
         flank[1] = - std::numeric_limits<int>::max();
         std::fill( flankix.begin(), flankix.end(), 0 );
@@ -219,7 +226,6 @@ void interpGenMap(const geneticMap &gMap, const vector<double> &locs, positions 
                 break;
             }
         }
-        pos.pos[i] = locs[i];
         if( yj == -1.0 ) {
             pos.cM[i] =
                 gMap.cM[ flankix[0] ] + ( gMap.cM[ flankix[1] ] - gMap.cM[ flankix[0] ] ) * 

@@ -100,7 +100,12 @@ void parameters::read_parameters() {
 
 void parameters::print_params(ofstream &logfile, const int which) {
     if( which == 0 ) {
-        logfile << "CGmix: Crossover and Gene converion detection in admixed populations." << endl;
+        logfile << "CGmix: Crossover and Gene conversion detection in admixed populations." << endl;
+        logfile << "Input command: ";
+        for(int i=0; i < argv.size(); i++ ) {
+            logfile << argv[i] << " ";
+        }
+        logfile << endl;
         logfile << "Mode " << mode;
         if( mode == 0 ) { logfile << ". Haplotype-only model." << endl; }
         if( mode == 1 ) { logfile << ". Full haplotype and gene conversion model." << endl; }

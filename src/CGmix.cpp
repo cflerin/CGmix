@@ -109,6 +109,26 @@ int main(int argc, char *argv[]) {
     positions pos;
     interpGenMap( gMap, locs, pos );
     logfile << "Interpolated " << pos.cM.size() << " positions from genetic map" << endl;
+    // test for nans in interpolated positions:
+    int nancnt = 0;
+    vector<int> nanix;
+    for(int i=0; i < pos.cM.size(); i++ ) {
+        if( std::isnan( pos.cM[i] ) ) {
+            nancnt++;
+            nanix.push_back( i );
+        }
+    }
+    if( nancnt > 0 ) { // remove offending sites
+        for(int i=nanix.size()-1; i>=0; i-- ) {
+            sites.erase( sites.begin() + nanix[i] );
+            pos.pos.erase( pos.pos.begin() + nanix[i] );
+            pos.cM.erase( pos.cM.begin() + nanix[i] );
+            obs.erase( obs.begin() + nanix[i] );
+        }
+        logfile << "Removed " << nancnt << " sites due to non-overlap with genetic map" << endl;
+        logfile << "There are now " << sites.size() << " sites with " << pos.pos.size() << " corresponding genetic positions" << endl;
+
+    }
     
     // set kb throughout:
     for(int i=0; i<pos.pos.size(); i++) {
@@ -126,7 +146,7 @@ int main(int argc, char *argv[]) {
         if( hapInfo.hapPop[i] == "p2" )
             param.n2 += 1;
     }
-    param.S = locs.size() ;
+    param.S = pos.pos.size() ;
     param.u2 = 1.0 - param.u1;
 
     hmmStates st;
@@ -153,7 +173,7 @@ int main(int argc, char *argv[]) {
     param.print_params(logfile, 1);
 
     // declare all hmm variables:
-    vector<double> sprob( st.states.size(), 0 );
+    vector<double> sprob( st.states.size(), 0.0 );
     double Pxa, Pxb;
     vector<vector<double> > fwd(param.S, vector<double>(st.states.size(), 0.0));
     vector<double> fwdS;
