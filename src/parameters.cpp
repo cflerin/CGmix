@@ -22,7 +22,8 @@ parameters::parameters(int argc, char *argv[]) {
     logf = "unset";
     pathf = "unset";
     matf = "unset";
-    gmfile = "/home/ccampbell/resources/genetic_map_HapMapII_GRCh37/genetic_map_GRCh37_chr22.txt.gz";
+    mapFile = "";
+    fixedMapRate = -1;
     n1 = 0; // set later
     n2 = 0; // set later
     S = 0; // set later
@@ -61,7 +62,8 @@ void parameters::read_parameters() {
         in_str = argv[i];
         if (in_str == "--in") { fname = get_arg(i+1); i++; }
         else if (in_str == "--out") { outfname = get_arg(i+1); i++; }
-        else if (in_str == "--gmfile") { gmfile = get_arg(i+1); i++; }
+        else if (in_str == "--mapFile") { mapFile = get_arg(i+1); i++; }
+        else if (in_str == "--fixedMapRate") { fixedMapRate = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--mode") { mode = atoi( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--T") { T = atof( get_arg(i+1).c_str() ); i++; }
         else if (in_str == "--u1") { u1 = atof( get_arg(i+1).c_str() ); i++; }
@@ -95,6 +97,9 @@ void parameters::read_parameters() {
     logf = outfname + ".log" + std::to_string(mode);
     pathf = outfname + ".path" + std::to_string(mode);
     matf = outfname + ".mat" + std::to_string(mode);
+    if( fixedMapRate != -1 ) {
+        mapFile = "None";
+    }
     //check_parameters();
 }
 
@@ -118,7 +123,11 @@ void parameters::print_params(ofstream &logfile, const int which) {
             logfile << "Reference input file: " << ref << "[(.sites|.locs|.hapnames)]" << endl;
         if( admix != "unset" )
             logfile << "Admix input file: " << admix << "[(.sites|.locs|.hapnames)]" << endl;
-        logfile << "Genetic map: " << gmfile << endl;
+        if( fixedMapRate == -1 ) {
+            logfile << "Genetic map: " << mapFile << endl;
+        } else {
+            logfile << "Using fixed recombination rate of: " << fixedMapRate << " cM/Mb"  << endl;
+        }
         logfile << "Log file: " << logf << endl;
         logfile << "Path file: " << pathf << endl;
         logfile << "Matrix output file: ";

@@ -28,7 +28,8 @@ class parameters
         string logf;    // determined
         string pathf;   // determined
         string matf;    // determined
-        string gmfile;
+        string mapFile;
+        double fixedMapRate;
         int n1;         // determined
         int n2;         // determined
         int S;          // determined

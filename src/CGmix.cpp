@@ -101,33 +101,44 @@ int main(int argc, char *argv[]) {
         logfile << "Read " << obs.size() << " admixed sites" << endl;
     }
 
-    geneticMap gMap;
-    readGenMap( param.gmfile, gMap );
-    logfile << "Read " << gMap.chr.size() << " lines from genetic map" << endl;
-
-    //interpolate values from locs:
     positions pos;
-    interpGenMap( gMap, locs, pos );
-    logfile << "Interpolated " << pos.cM.size() << " positions from genetic map" << endl;
-    // test for nans in interpolated positions:
-    int nancnt = 0;
-    vector<int> nanix;
-    for(int i=0; i < pos.cM.size(); i++ ) {
-        if( std::isnan( pos.cM[i] ) ) {
-            nancnt++;
-            nanix.push_back( i );
-        }
-    }
-    if( nancnt > 0 ) { // remove offending sites
-        for(int i=nanix.size()-1; i>=0; i-- ) {
-            sites.erase( sites.begin() + nanix[i] );
-            pos.pos.erase( pos.pos.begin() + nanix[i] );
-            pos.cM.erase( pos.cM.begin() + nanix[i] );
-            obs.erase( obs.begin() + nanix[i] );
-        }
-        logfile << "Removed " << nancnt << " sites due to non-overlap with genetic map" << endl;
-        logfile << "There are now " << sites.size() << " sites with " << pos.pos.size() << " corresponding genetic positions" << endl;
+    if( param.fixedMapRate == -1 ) {
+        geneticMap gMap;
+        readGenMap( param.mapFile, gMap );
+        logfile << "Read " << gMap.chr.size() << " lines from genetic map" << endl;
 
+        //interpolate values from locs:
+        interpGenMap( gMap, locs, pos );
+        logfile << "Interpolated " << pos.cM.size() << " positions from genetic map" << endl;
+        // test for nans in interpolated positions:
+        int nancnt = 0;
+        vector<int> nanix;
+        for(int i=0; i < pos.cM.size(); i++ ) {
+            if( std::isnan( pos.cM[i] ) ) {
+                nancnt++;
+                nanix.push_back( i );
+            }
+        }
+        if( nancnt > 0 ) { // remove offending sites
+            for(int i=nanix.size()-1; i>=0; i-- ) {
+                sites.erase( sites.begin() + nanix[i] );
+                pos.pos.erase( pos.pos.begin() + nanix[i] );
+                pos.cM.erase( pos.cM.begin() + nanix[i] );
+                obs.erase( obs.begin() + nanix[i] );
+            }
+            logfile << "Removed " << nancnt << " sites due to non-overlap with genetic map" << endl;
+            logfile << "There are now " << sites.size() << " sites with " << pos.pos.size() << " corresponding genetic positions" << endl;
+        }
+    } else { // use fixed recombination rates
+        pos.pos = locs;
+        pos.cM.resize( locs.size() );
+        double d;
+        double cumcM = 0.0;
+        for(int i=1; i < pos.pos.size(); i++ ) {
+            d = ( pos.pos[i] - pos.pos[i-1] ) / 1000000; // dist in Mb
+            cumcM += ( param.fixedMapRate * d ); // cumulative genetic distance, cM
+            pos.cM[i] = cumcM;
+        }
     }
     
     // set kb throughout:
@@ -260,43 +271,44 @@ int main(int argc, char *argv[]) {
             }
         }
         int l = pvec.rleHap.size() - 1;
-        if( pvec.rlePrevPop[ l ] != pvec.rlePrevPop[ l-1 ] ) {
-            island.push_back( 1 );
-        } else {
-            island.push_back( 0 );
-        }
-        // find stretches less than X sites, mark for follow-up
-        int stepix = 0;
-        //int gcsens = 8; // how long a vpath stretch to consider for follow-up
-        for(int i=0; i < pvec.rleHap.size(); i++ ) {
-            //cout << "rleHap=" << pvec.rleHap[i] << "\trleCnt=" << pvec.rleCnt[i] << "\trlePop=" << pvec.rlePrevPop[i] << "\tisland=" << island[i] << endl;
-            if( ( pvec.rleCnt[i] <= param.gcsens ) && ( island[i] == 1 ) ) {
-                for(int j=0; j < pvec.rleCnt[i]; j++ ) {
-                    //cout << "pswitch ix: " << stepix+j << endl;
-                    pvec.pswitch[ stepix+j ] = 1;
-                }
+        if( l > 0 ) { // skip if there is only one viterbi stretch
+            if( pvec.rlePrevPop[ l ] != pvec.rlePrevPop[ l-1 ] ) {
+                island.push_back( 1 );
+            } else {
+                island.push_back( 0 );
             }
-            stepix += pvec.rleCnt[i];
+            // find stretches less than X sites, mark for follow-up
+            int stepix = 0;
+            for(int i=0; i < pvec.rleHap.size(); i++ ) {
+                //cout << "rleHap=" << pvec.rleHap[i] << "\trleCnt=" << pvec.rleCnt[i] << "\trlePop=" << pvec.rlePrevPop[i] << "\tisland=" << island[i] << endl;
+                if( ( pvec.rleCnt[i] <= param.gcsens ) && ( island[i] == 1 ) ) {
+                    for(int j=0; j < pvec.rleCnt[i]; j++ ) {
+                        //cout << "pswitch ix: " << stepix+j << endl;
+                        pvec.pswitch[ stepix+j ] = 1;
+                    }
+                }
+                stepix += pvec.rleCnt[i];
+            }
+            vector<int> swIx;
+            for(int j=0; j < param.S; j++ ) {
+                if( pvec.pswitch[j] == 1 )
+                    swIx.push_back( j );
+            }
+            //int width = 5; // how much to expand on each side of switch marks
+            // expand marks around switches:
+            vector<int> repl(2);
+            for(int j=0; j < swIx.size(); j++) {
+                repl[0] = swIx[j] - param.width;
+                repl[1] = swIx[j] + param.width;
+                if( repl[0] < 0 )
+                    repl[0] = 0;
+                if( repl[1] > (param.S-1) )
+                    repl[1] = (param.S-1);
+                for(int k=repl[0]; k <= repl[1]; k++ )
+                    pvec.pswitch[k] = 1;
+            }
+            // for(int i=0; i<pvec.pswitch.size(); i++) { if( pvec.pswitch[i] == 1 ) cout << i << " "; } cout << endl;
         }
-        vector<int> swIx;
-        for(int j=0; j < param.S; j++ ) {
-            if( pvec.pswitch[j] == 1 )
-                swIx.push_back( j );
-        }
-        //int width = 5; // how much to expand on each side of switch marks
-        // expand marks around switches:
-        vector<int> repl(2);
-        for(int j=0; j < swIx.size(); j++) {
-            repl[0] = swIx[j] - param.width;
-            repl[1] = swIx[j] + param.width;
-            if( repl[0] < 0 )
-                repl[0] = 0;
-            if( repl[1] > (param.S-1) )
-                repl[1] = (param.S-1);
-            for(int k=repl[0]; k <= repl[1]; k++ )
-                pvec.pswitch[k] = 1;
-        }
-        // for(int i=0; i<pvec.pswitch.size(); i++) { if( pvec.pswitch[i] == 1 ) cout << i << " "; } cout << endl;
     }
 
     if( ( param.mode == 0 ) || ( param.mode == 1 ) ) {
