@@ -747,7 +747,7 @@ pathVec::pathVec( parameters param ) {
     }
 }
 
-void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<double> > &pprob, parameters &param, ofstream &pathfile ) {
+void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<double> > &pprob, parameters &param, vector<double> &aleFrqP1, vector<double> &aleFrqP2, ofstream &pathfile ) {
     if( ( param.mode == 1 ) || ( param.mode == 2 ) || ( param.mode == 3 ) ) {
         // calculate total probability of a cross-population gene conversion:
         for(int j=0; j < pprob.size(); j++ ) {
@@ -772,7 +772,7 @@ void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<dou
         }
     } // endif
     // output path and probabilites:
-    pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\t";
+    pathfile << "site\tpos\tVpath\tVpathProb\tPpath\tPpathProb\tPswitch\tAAFp1\tAAFp2\t";
     if( ( param.mode == 2 ) || ( param.mode == 3 ) ) {
         if( param.viterbi == 1 ) 
             pathfile << "Vpath2\tVpathProb2\t";
@@ -783,6 +783,7 @@ void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<dou
     for(int j=0; j < pprob.size(); j++ ) {
         intpos = static_cast<int>( pos.pos[j]*1000+0.5 );
         pathfile << j << "\t" << intpos << "\t" << pvec.vpath[j] << "\t" << pvec.vprob[j] << "\t" << pvec.pppath[j] << "\t" << pvec.ppprob[j] << "\t" << pvec.pswitch[j] << "\t" ;
+        pathfile << aleFrqP1[j] << "\t" << aleFrqP2[j] << "\t";
         if( ( param.mode == 2 ) || ( param.mode == 3 ) ) {
             if( param.viterbi == 1 ) 
                 pathfile << pvec.vpath2[j] << "\t" << pvec.vprob2[j] << "\t";

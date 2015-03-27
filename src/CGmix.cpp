@@ -183,6 +183,29 @@ int main(int argc, char *argv[]) {
     pathVec pvec( param );
     param.print_params(logfile, 1);
 
+    ////////////////////////////////////
+    // calculate alt. allele frequency for each ref population:
+    vector<double> aleFrqP1( param.S );
+    vector<double> aleFrqP2( param.S );
+    for(int j=0; j < param.S; j++) {
+        double acp1 = 0.0, acp2 = 0.0, ac0 = 0.0, ac1 = 0.0;
+        for(int i=0; i < sites[j].size(); i++) {
+            if( sites[j][i] == 1 ) { 
+                if( hapInfo.hP[i] == 1 ) {
+                    acp1 += 1;
+                } else if( hapInfo.hP[i] == 2 ) {
+                    acp2 += 1;
+                }
+                ac1 += 1;
+            } else if( sites[j][i] == 0 ) {
+                ac0 += 1;
+            }
+        }
+        aleFrqP1[j] = acp1 / ( ac0 + ac1 );
+        aleFrqP2[j] = acp2 / ( ac0 + ac1 );
+    }
+    
+    ////////////////////////////////////
     // declare all hmm variables:
     vector<double> sprob( st.states.size(), 0.0 );
     double Pxa, Pxb;
@@ -313,7 +336,7 @@ int main(int argc, char *argv[]) {
 
     if( ( param.mode == 0 ) || ( param.mode == 1 ) ) {
         logfile << "Starting path output" << endl;
-        pathOutput( pvec, st, pos, pprob, param, pathfile );
+        pathOutput( pvec, st, pos, pprob, param, aleFrqP1, aleFrqP2, pathfile );
     }
 
     //////////////////////////
@@ -420,7 +443,7 @@ int main(int argc, char *argv[]) {
         pvec.gcprob.resize( sites.size(), 0.0 );
         std::fill( pvec.gcprob.begin(), pvec.gcprob.end(), 0.0 );
         std::fill( pvec.transPGC.begin(), pvec.transPGC.end(), 0.0 );
-        pathOutput( pvec, st2, pos, pprob, param, pathfile );
+        pathOutput( pvec, st2, pos, pprob, param, aleFrqP1, aleFrqP2, pathfile );
 
     } // end of 2nd pass
 

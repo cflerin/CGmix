@@ -126,7 +126,14 @@ void viterbi2(
 
 void max( const vector<double> &vec, double maxelement );
 
-void pathOutput( pathVec &pvec, hmmStates &st, positions &pos, vector<vector<double> > &pprob, parameters &param, ofstream &pathfile );
+void pathOutput( pathVec &pvec, 
+        hmmStates &st,
+        positions &pos,
+        vector<vector<double> > &pprob,
+        parameters &param,
+        vector<double> &alefrqp1,
+        vector<double> &alefrqp2,
+        ofstream &pathfile );
 
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
 std::vector<std::string> split(const std::string &s, char delim);
