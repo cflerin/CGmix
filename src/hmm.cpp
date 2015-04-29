@@ -143,11 +143,11 @@ void getsprob(
             (gam1/p.n1+gam2/p.n2) / ( (p.n1+p.n2) * ( p.lam * (p.n1+p.n2) + (gam1/p.n1+gam2/p.n2) )) );
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
-            if( st.Xpop[i] == 1 ) { e = p.theta1_match; }
-            else if( st.Xpop[i] == 2 ) { e = p.theta2_match; }
+            if( st.Xpop[i] == 1 ) { e = p.emit1_match; }
+            else if( st.Xpop[i] == 2 ) { e = p.emit2_match; }
         } else {
-            if( st.Xpop[i] == 1 ) { e = p.theta1_mismatch; }
-            else if( st.Xpop[i] == 2 ) { e = p.theta2_mismatch; }
+            if( st.Xpop[i] == 1 ) { e = p.emit1_mismatch; }
+            else if( st.Xpop[i] == 2 ) { e = p.emit2_mismatch; }
         }
         if( st.Ghap[i] == 0 ) {
             sprob[i] =  sprob_G0 + e;
@@ -167,11 +167,11 @@ void getsprobX(
     double sprobX = log( 1.0 / ( p.n1 + p.n2 ) );
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Xindx[i] ] == obs[0] ) {
-            if( st.Xpop[i] == 1 ) { e = p.theta1_match; }
-            else if( st.Xpop[i] == 2 ) { e = p.theta2_match; }
+            if( st.Xpop[i] == 1 ) { e = p.emit1_match; }
+            else if( st.Xpop[i] == 2 ) { e = p.emit2_match; }
         } else {
-            if( st.Xpop[i] == 1 ) { e = p.theta1_mismatch; }
-            else if( st.Xpop[i] == 2 ) { e = p.theta2_mismatch; }
+            if( st.Xpop[i] == 1 ) { e = p.emit1_mismatch; }
+            else if( st.Xpop[i] == 2 ) { e = p.emit2_mismatch; }
         }
         sprob[i] = sprobX + e;
     }
@@ -321,11 +321,11 @@ void forward(
                 }
             } // end 'from' loop
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
+                if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
             } else {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
             }
             // cout << "j=" << j << endl;
             logSumExp( tmp, lsum, p.passAcc );
@@ -369,11 +369,11 @@ void backward(
             for(int t=0; t < bwd[j+1].size(); t++ ) {
                 trX = lookupXtrans( t, f, d, r, st, p, trXbin);
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                    else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
+                    if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
+                    else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
                 } else {
-                    if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                    else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                    if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
+                    else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
                 }
                 if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
@@ -560,11 +560,11 @@ void viterbi(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
+                if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
             } else {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
             }
             vit[j][t] = e + vmax;
         } // end to loop
@@ -655,11 +655,11 @@ void viterbi2(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_match; }
+                if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
+                else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
             } else {
-                if( st.Xpop[t] == 1 ) { e = p.theta1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.theta2_mismatch; }
+                if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
+                else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
             }
             vit[j][t] = e + vmax;
         } // end to loop

@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     time_t start,end;
     time(&start);
     parameters param(argc, argv);
-//    params.print_help();
+    param.print_help();
     param.read_parameters();
 
     if( param.fname == "empty"  ) {
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
         //logfile << "Read " << hapInfo.hN.size() << " haplotype definitions" << endl;
 
         if( obsIndx.size() > 1 ) {
-            cerr << "Too many p3 haplotypes!" << endl;
+            cerr << "Too many p3 haplotypes! Only one allowed per run." << endl;
             exit(1);
         }
         obs.resize( sites.size(), 0.0 );
@@ -168,17 +168,20 @@ int main(int argc, char *argv[]) {
         param.theta2 = numeric_limits<double>::epsilon();
     } else if( param.mode == 1 ) {
         generateStates( hapInfo, st );
-        // set theta to a reasonable number for full model:
-        param.theta1 = 0.2 / ( 0.2 + param.n1 );
-        param.theta2 = 0.2 / ( 0.2 + param.n2 );
+        // set theta using watterson's estimator:
+        param.theta1 = param.theta2 = 0.0;
+        for(int m=1; m < param.n1; m++) { param.theta1 += 1.0/m; }
+        for(int m=1; m < param.n2; m++) { param.theta2 += 1.0/m; }
+        param.theta1 = 1.0 / param.theta1;
+        param.theta2 = 1.0 / param.theta2;
     }
     logfile << "Generated " << st.states.size() << " states" << endl;
 
     // emissions probabilities:
-    param.theta1_match = log( 1.0 - param.theta1 );
-    param.theta1_mismatch = log( param.theta1 );
-    param.theta2_match = log( 1.0 - param.theta2 );
-    param.theta2_mismatch = log( param.theta2 );
+    param.emit1_match = log( ( 2.0 * param.n1 + param.theta1 )/( 2.0 * ( param.n1 + param.theta1 ) ) );
+    param.emit1_mismatch = log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) );
+    param.emit2_match = log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) );
+    param.emit2_mismatch = log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) );
 
     pathVec pvec( param );
     param.print_params(logfile, 1);
@@ -361,9 +364,18 @@ int main(int argc, char *argv[]) {
     if( ( param.mode == 2 ) || ( param.mode == 3 ) ) {
         logfile.precision (ss);
         logfile << endl << "Restart hmm" << endl;
-        // set theta to for full model:
-        param.theta1 = 0.2 / ( 0.2 + param.n1 );
-        param.theta2 = 0.2 / ( 0.2 + param.n2 );
+
+        // set theta using watterson's estimator:
+        param.theta1 = param.theta2 = 0.0;
+        for(int m=1; m < param.n1; m++) { param.theta1 += 1/m; }
+        for(int m=1; m < param.n2; m++) { param.theta2 += 1/m; }
+        param.theta1 = 1.0 / param.theta1;
+        param.theta2 = 1.0 / param.theta2;
+        // emissions probabilities:
+        param.emit1_match = log( ( 2.0 * param.n1 + param.theta1 )/( 2.0 * ( param.n1 + param.theta1 ) ) );
+        param.emit1_mismatch = log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) );
+        param.emit2_match = log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) );
+        param.emit2_mismatch = log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) );
 
         hmmStates st2;
         generateStates( hapInfo, st2 );

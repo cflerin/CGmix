@@ -28,7 +28,7 @@ parameters::parameters(int argc, char *argv[]) {
     n2 = 0; // set later
     S = 0; // set later
     T = 7.0;
-    u1 = 0.8;
+    u1 = 0.2;
     Ne1 = 10000;
     Ne2 = 18000;
     f = 10.0; // scaling factor for g ( f=gamma/rho, g=f*r, and gamma=4*Ne*g )
@@ -105,7 +105,7 @@ void parameters::read_parameters() {
 
 void parameters::print_params(ofstream &logfile, const int which) {
     if( which == 0 ) {
-        logfile << "CGmix: Crossover and Gene conversion detection in admixed populations." << endl;
+        logfile << "CGmix: Crossover and gene conversion detection in admixed populations." << endl;
         logfile << "Input command: ";
         for(int i=0; i < argv.size(); i++ ) {
             logfile << argv[i] << " ";
@@ -162,7 +162,53 @@ void parameters::print_params(ofstream &logfile, const int which) {
         logfile << "GCsensitivity = " << gcsens << endl;
         logfile << "Expansion width = " << width << endl;
     }
+}
 
+void parameters::print_help() {
+    string in_str;
+    if( argv.size() <= 1 ) {
+        argv.push_back("--?");
+    }
+    for(int i=0; i < argv.size(); i++) {
+        in_str = argv[i];
+        if ((in_str == "-h") || (in_str == "-?") || (in_str == "-help") || (in_str == "--?") || (in_str == "--help") || (in_str == "--h")) {
+            cout << "CGmix: Crossover and gene conversion detection in admixed populations." << endl;
+            cout << endl;
+            cout << "Input files:" << endl;
+            /////
+            /////
+            cout << "\t--ref" << "\t\tFile prefix for the reference haplotypes data:" << endl;
+            cout << "\t\t\t(.sites) file: Each columns contains a haplotype, each row a variant coded as 0 or 1, whitespace delimited." << endl;
+            cout << "\t\t\t(.locs)  file: One column, each line gives a physical position in integer base pairs on the chromosome." << endl;
+            cout << "\t\t\t(.hapnames)  file: Two columns, the first gives the haplotype name, the second give the population it belongs to ('p1' or 'p2')." << endl;
+            cout << "\t--admix" << "\t\tFile prefix for the admixed haplotype data.  Same 3 files as above, except only one admixed haplotype is allowed and it must be labeled as population 'p3'." << endl;
+            cout << "\t--in" << "\t\tAlternate input format from --ref/--admix options above. Same 3 files as above, except the admixed haplotype is included in the same file as the reference haplotypes and the 'sites' and 'locs' files are transposed." << endl;
+            /////
 
+            /////
+            cout << "Model parameters:" << endl;
+            cout << "\t--mode" << "\t\tHMM run mode:" << endl;
+            cout << "\t\t\t0 runs a first-pass using only the crossover chain." << endl;
+            cout << "\t\t\t1 runs the full haplotype and gene conversion model. Potentially very slow." << endl;
+            cout << "\t\t\t2 runs the first pass mode (0) to select interesting sites, then restarts, applying the full model only on those sites." << endl;
+            cout << "\t\t\t3 takes input from a previous first pass run (mode 0) to mark interesting sites, and applies the full model only on those sites." << endl;
+            cout << "\t--T" << "\t\tNumber of generations since admixture. [Default = " << T << "]." << endl;
+            cout << "\t--u1" << "\t\tAncestry contribution from pop 1. [Default, Europeans = " << u1 << "]." << endl;
+            cout << "\t--Ne1" << "\t\tEffective population size for pop 1. [Default, Europeans = " << Ne1 << "]." << endl;
+            cout << "\t--Ne2" << "\t\tEffective population size for pop 2. [Default, Africans = " << Ne2 << "]." << endl;
+            cout << "\t--f" << "\t\tRatio of gene conversion to crossover, g / r. [Default = " << f << "]." << endl;
+            cout << "\t--lam" << "\t\tLambda, rate of terminating a gene conversion tract (1/lambda = tract length in kb). [Default = " << lam << "]." << endl;
+            cout << "\t--mapFile" << "\tPath to a genetic map file (gzipped). Must follow the same convention as the Hapmap2 genetic map file." << endl;
+            cout << "\t--fixedMapRate" << "\tInstead of using a genetic map, use this value as a fixed estimate of the genome-wide recombination rate (usually 1.1 cM/Mb)." << endl;
+            /////
+            cout << "Output parameters:" << endl;
+            cout << "\t--out" << "\t\tOutput file prefix. Optional, defaults to value of '--admix'. CGmix produces two files:" << endl;
+            cout << "\t\t\t(.log[mode]) file: Contains all parameters and log info for the run." << endl;
+            cout << "\t\t\t(.path[mode]) file: Contains model outputs for each site." << endl;
+            cout << "\t--matrixOutput" << "\tOutput forward, backward, and posterior matrices. Can use a lot of disk space." << endl;
+
+            exit(0);
+        }
+    }
 }
 

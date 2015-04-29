@@ -42,10 +42,10 @@ class parameters
         double lam;
         double theta1;  // determined
         double theta2;  // determined
-        double theta1_match;    // determined
-        double theta1_mismatch; // determined
-        double theta2_match;    // determined
-        double theta2_mismatch; // determined
+        double emit1_match;    // determined
+        double emit1_mismatch; // determined
+        double emit2_match;    // determined
+        double emit2_mismatch; // determined
         int highAccuracy; // whether to use sort in logSumExp (1) or not (0)
         int passAcc; // if two-pass model, use this for force sort on first pass
         int viterbi; // whether to run viterbi or not
