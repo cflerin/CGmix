@@ -142,7 +142,7 @@ void getsprob(
     sprob_G1.push_back( log( ( g * p.T ) / ( p.lam * ( p.n1 + p.n2 ) + g * p.T ) * ( p.u1 / p.n1 ) ) ); // pop1
     sprob_G1.push_back( log( ( g * p.T ) / ( p.lam * ( p.n1 + p.n2 ) + g * p.T ) * ( ( 1.0 - p.u1 ) / p.n2 ) ) ); // pop2
     unsigned int whichGpop;
-    double tmpsum = 0.0;
+    //double tmpsum = 0.0;
     for(int i=0; i < st.states.size(); i++) {
         if( st.Ghap[i] == 0 ) { // match on Xpop if G==0
             whichGpop = st.Xpop[i];
@@ -157,10 +157,10 @@ void getsprob(
             e = p.emitMismatch[ whichGpop - 1 ];
         }
         sprob[i] = sprobX[ st.Xpop[i] - 1 ] + sprobG_i + e;
-        tmpsum += exp( sprobX[ st.Xpop[i] - 1 ] + sprobG_i );
-        cout << "Xpop=" << st.Xpop[i] << " Gpop=" << st.Gpop[i] << " whichGpop=" << whichGpop << " Xprob=" << exp(sprobX[st.Xpop[i]-1]) << " Gprob= " << exp(sprobG_i) << endl;
+        //tmpsum += exp( sprobX[ st.Xpop[i] - 1 ] + sprobG_i );
+        //cout << "Xpop=" << st.Xpop[i] << " Gpop=" << st.Gpop[i] << " whichGpop=" << whichGpop << " Xprob=" << exp(sprobX[st.Xpop[i]-1]) << " Gprob= " << exp(sprobG_i) << endl;
     }
-    cout << "sprob sum = " << tmpsum << endl;
+    //cout << "sprob sum = " << tmpsum << endl;
 }
 
 void getsprobX(
@@ -187,6 +187,39 @@ void getsprobX(
 }
 
 double lookupXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trXbin ) {
+    // Here, the input r is genetic distance in Morgans, d in kb
+    // convert to rate:
+    double rrate = r / d;
+    double trX1, trX2, trX3, trX4, trX5, trX6;
+    // first pass at this site: calculate all reusable values:
+    if( trXbin[6] == 99 ) {
+        // pop1:
+        double rho1 = 4.0 * p.Ne1 * rrate;
+        trX1 = ( 1.0 - exp( -rrate * d * p.T ) ) * p.u1 / p.n1;
+        trX2 = exp( -rrate * d * p.T ) * ( 1.0 - exp( -rho1 * d / p.n1 ) ) / p.n1 + 
+               ( 1.0 - exp( -rrate * d * p.T )) * p.u1 / p.n1 ;
+        trX3 = exp( -rrate * d * p.T ) * exp( -rho1 * d / p.n1 ) + 
+               exp( -rrate * d * p.T ) * ( 1.0 - exp( -rho1 * d / p.n1 ) ) / p.n1 + 
+               ( 1.0 - exp( -rrate * d * p.T )) * p.u1 / p.n1 ;
+        // pop2:
+        double rho2 = 4.0 * p.Ne2 * rrate;
+        trX4 = ( 1.0 - exp( -rrate * d * p.T ) ) * ( 1.0 - p.u1 ) / p.n2;
+        trX5 = exp( -rrate * d * p.T ) * ( 1.0 - exp( -rho2 * d / p.n2 ) ) / p.n2 + 
+               ( 1.0 - exp( -rrate * d * p.T )) * ( 1.0 - p.u1 ) / p.n2;
+        trX6 = exp( -rrate * d * p.T ) * exp( -rho2 * d / p.n2 ) + 
+               exp( -rrate * d * p.T ) * ( 1.0 - exp( -rho2 * d / p.n2 ) ) / p.n2 + 
+               ( 1.0 - exp( -rrate * d * p.T )) * ( 1.0 - p.u1 ) / p.n2 ;
+        trXbin[0] = log( trX1 );
+        trXbin[1] = log( trX2 );
+        trXbin[2] = log( trX3 );
+        trXbin[3] = log( trX4 );
+        trXbin[4] = log( trX5 );
+        trXbin[5] = log( trX6 );
+        trXbin[6] = 1.0;
+        // prob sums check:
+        // cout << "trX sum from p1=" << exp(trXbin[2]) + exp(trXbin[1])*(p.n1-1) + exp(trXbin[3])*p.n2;
+        // cout << "\ttrX sum from p2=" << exp(trXbin[5]) + exp(trXbin[4])*(p.n2-1) + exp(trXbin[0])*p.n1 << endl;
+    }
     int type;
     double trX;
     if( st.Xpop[from] != st.Xpop[to] ) {
@@ -201,14 +234,7 @@ double lookupXtrans(const int &to, const int &from, const double &d, const doubl
     if( st.Xpop[to] == 2 ) // shift type index by 3 if transitioning to a haplotype in pop #2.
         type += 3;
     //cout << " type" << type << " ";
-    if( trXbin[ type ] == 99 ) { // this transition hasn't been set yet:
-        getXtrans( to, from, d, r, st, p, trX);
-        trXbin[ type ] = trX;
-        return( trX );
-    } else { // lookup and return a value already seen:
-        trX = trXbin[ type ];
-        return( trX );
-    }
+    return( trXbin[ type ] );
 }
 
 inline double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin ) {
@@ -299,16 +325,16 @@ void forward(
     // starting prob:
     fwd[0] = sprob;
     double lsum, trX, trG, e, d, r;
-    vector<double> trXbin(6,99);
-    vector<double> trGbin(11,99);
+    vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
+    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
+    unsigned int whichPop;
     vector<double> tmp;
     //cout << "pswitch"<<pswitch.size() << endl;
     for(int j=1; j < sites.size() ; j++ ) {
         //cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << fwd[j].size() << endl;
-        //d = dvec[j] - dvec[j-1];
-        d = pos.pos[j] - pos.pos[j-1];
-        r = pos.cM[j] - pos.cM[j-1];
+        d = pos.pos[j] - pos.pos[j-1]; // physical distance in kb
+        r = pos.cM[j] - pos.cM[j-1]; // genetic distance in Morgans
         if( pswitch[j] == 0 ) { // choose sites to match for emission
             siteIndx = st.Xindx;
         } else {
@@ -325,16 +351,23 @@ void forward(
                     trG = lookupGtrans( t, f, d, r, st, p, trGbin );
                     tmp[f] = fwd[j-1][f] + trX + trG;
                 } else {
-                    //cout << "\ttrx" << endl;
                     tmp[f] = fwd[j-1][f] + trX;
                 }
             } // end 'from' loop
+            // determine population of 'to' haplotype:
+            if( ( pswitch[j] == 1 ) ) { // if GC chain...
+                if( st.Gpop[t] == 0 ) { // ... and G==0
+                    whichPop = st.Xpop[t]; // use Xpop when G==0
+                } else { // G!=0
+                    whichPop = st.Gpop[t]; // use Gpop when G!=0
+                }
+            } else { // no GC chain
+                whichPop = st.Xpop[t]; // use Xpop when G chain does not exist
+            }
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
+                e = p.emitMatch[ whichPop - 1 ];
             } else {
-                if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
+                e = p.emitMismatch[ whichPop -1 ];
             }
             // cout << "j=" << j << endl;
             logSumExp( tmp, lsum, p.passAcc );
@@ -358,8 +391,8 @@ void backward(
     double e, lsum, trX, trG, d, r;
     double negInf = - std::numeric_limits<double>::infinity();
     double log_eps = log(numeric_limits<double>::epsilon());
-    vector<double> trXbin(6,99);
-    vector<double> trGbin(11,99);
+    vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
+    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
     vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
@@ -542,8 +575,8 @@ void viterbi(
     // recursion:
     double trX, trG, vmax, tmp, e, d, r;
     double negInf = - std::numeric_limits<double>::infinity();
-    vector<double> trXbin(6,99);
-    vector<double> trGbin(11,99);
+    vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
+    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
     if( p.mode == 1 ) {
         siteIndx = st.Gindx;
@@ -637,8 +670,8 @@ void viterbi2(
     double trX, trG, vmax, tmp, e, d, r;
     double negInf = - std::numeric_limits<double>::infinity();
     //double log_eps = log(numeric_limits<double>::epsilon());
-    vector<double> trXbin(6,99);
-    vector<double> trGbin(11,99);
+    vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
+    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
     for(int j=1; j < sites.size() ; j++ ) {
         //d = dvec[j] - dvec[j-1];
