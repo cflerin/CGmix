@@ -42,6 +42,8 @@ class parameters
         double lam;
         double theta1;  // determined
         double theta2;  // determined
+        vector<double> emitMatch;
+        vector<double> emitMismatch;
         double emit1_match;    // determined
         double emit1_mismatch; // determined
         double emit2_match;    // determined

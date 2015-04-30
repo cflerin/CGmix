@@ -177,10 +177,15 @@ int main(int argc, char *argv[]) {
     }
     logfile << "Generated " << st.states.size() << " states" << endl;
 
-    // emissions probabilities:
+    // emissions probabilities: vector of [ pop1, pop2 ] values:
+    param.emitMatch.push_back( log( ( 2.0 * param.n1 + param.theta1 )/( 2.0 * ( param.n1 + param.theta1 ) ) ) ); // pop1
+    param.emitMatch.push_back( log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) ) ); // pop2
+    param.emitMismatch.push_back( log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) ) ); // pop1
+    param.emitMismatch.push_back( log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) ) ); // pop2
+    //
     param.emit1_match = log( ( 2.0 * param.n1 + param.theta1 )/( 2.0 * ( param.n1 + param.theta1 ) ) );
-    param.emit1_mismatch = log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) );
     param.emit2_match = log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) );
+    param.emit1_mismatch = log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) );
     param.emit2_mismatch = log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) );
 
     pathVec pvec( param );

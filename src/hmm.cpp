@@ -81,7 +81,6 @@ void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
         // tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]);
         tmp = hapPop[i] + "-" + hapNames[i];
         st.states.push_back( tmp );
-        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.states[i] << endl;
         //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.Ghap[i] << "\t" << st.states[i] << endl;
     }
 }
@@ -133,28 +132,35 @@ void getsprob(
         const hmmStates &st,
         const vector<int> &obs,
         vector<double> &sprob ) {
-    double e;
-    double g = 1/100000.0 * p.f; // 1cM/Mb * f = 1Morgan/10000kb
-    double gam1 = 4 * p.Ne1 * g;
-    double gam2 = 4 * p.Ne2 * g;
-    double sprob_G0 = log( 1.0 / ( p.n1 + p.n2 ) * 
-            ( p.lam * (p.n1+p.n2) ) / ( p.lam * (p.n1+p.n1) + (gam1/p.n1+gam2/p.n2)) );
-    double sprob_G1 = log( 1.0 / ( p.n1 + p.n2 ) * 
-            (gam1/p.n1+gam2/p.n2) / ( (p.n1+p.n2) * ( p.lam * (p.n1+p.n2) + (gam1/p.n1+gam2/p.n2) )) );
+    double e, sprobG_i;
+    double g = 1.1 / 100000.0 * p.f; // 1.1cM/Mb * f = 1Morgan/kb
+    vector<double> sprobX; // [ pop1, pop2 ]
+    sprobX.push_back( log( p.u1 / p.n1 ) ); // pop1
+    sprobX.push_back( log( ( 1.0 - p.u1 ) / p.n2 ) ); // pop2
+    double sprob_G0 = log( ( p.lam * ( p.n1 + p.n2 ) ) / ( p.lam * ( p.n1 + p.n2 ) + g * p.T ) );
+    vector<double> sprob_G1; // [ pop1, pop2 ]
+    sprob_G1.push_back( log( ( g * p.T ) / ( p.lam * ( p.n1 + p.n2 ) + g * p.T ) * ( p.u1 / p.n1 ) ) ); // pop1
+    sprob_G1.push_back( log( ( g * p.T ) / ( p.lam * ( p.n1 + p.n2 ) + g * p.T ) * ( ( 1.0 - p.u1 ) / p.n2 ) ) ); // pop2
+    unsigned int whichGpop;
+    double tmpsum = 0.0;
     for(int i=0; i < st.states.size(); i++) {
+        if( st.Ghap[i] == 0 ) { // match on Xpop if G==0
+            whichGpop = st.Xpop[i];
+            sprobG_i = sprob_G0; // use G0
+        } else { // match on Gpop if G!=0
+            whichGpop = st.Gpop[i];
+            sprobG_i = sprob_G1[ whichGpop - 1 ]; // use pop-specific G1
+        }
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
-            if( st.Xpop[i] == 1 ) { e = p.emit1_match; }
-            else if( st.Xpop[i] == 2 ) { e = p.emit2_match; }
+            e = p.emitMatch[ whichGpop - 1 ];
         } else {
-            if( st.Xpop[i] == 1 ) { e = p.emit1_mismatch; }
-            else if( st.Xpop[i] == 2 ) { e = p.emit2_mismatch; }
+            e = p.emitMismatch[ whichGpop - 1 ];
         }
-        if( st.Ghap[i] == 0 ) {
-            sprob[i] =  sprob_G0 + e;
-        } else {
-            sprob[i] =  sprob_G1 + e;
-        }
+        sprob[i] = sprobX[ st.Xpop[i] - 1 ] + sprobG_i + e;
+        tmpsum += exp( sprobX[ st.Xpop[i] - 1 ] + sprobG_i );
+        cout << "Xpop=" << st.Xpop[i] << " Gpop=" << st.Gpop[i] << " whichGpop=" << whichGpop << " Xprob=" << exp(sprobX[st.Xpop[i]-1]) << " Gprob= " << exp(sprobG_i) << endl;
     }
+    cout << "sprob sum = " << tmpsum << endl;
 }
 
 void getsprobX(
@@ -164,17 +170,20 @@ void getsprobX(
         const vector<int> &obs,
         vector<double> &sprob ) {
     double e;
-    double sprobX = log( 1.0 / ( p.n1 + p.n2 ) );
+    vector<double> sprobX; // [ pop1, pop2 ]
+    sprobX.push_back( log( p.u1 / p.n1 ) ); // pop1
+    sprobX.push_back( log( ( 1.0 - p.u1 ) / p.n2 ) ); // pop2
+    double tmpsum = 0.0;
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Xindx[i] ] == obs[0] ) {
-            if( st.Xpop[i] == 1 ) { e = p.emit1_match; }
-            else if( st.Xpop[i] == 2 ) { e = p.emit2_match; }
+            e = p.emitMatch[ st.Xpop[i] - 1 ];
         } else {
-            if( st.Xpop[i] == 1 ) { e = p.emit1_mismatch; }
-            else if( st.Xpop[i] == 2 ) { e = p.emit2_mismatch; }
+            e = p.emitMismatch[ st.Xpop[i] - 1 ];
         }
-        sprob[i] = sprobX + e;
+        sprob[i] = sprobX[ st.Xpop[i] - 1 ] + e;
+        tmpsum += exp( sprobX[ st.Xpop[i] - 1 ] );
     }
+    cout << "sprob sum = " << tmpsum << endl;
 }
 
 double lookupXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trXbin ) {
