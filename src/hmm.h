@@ -44,14 +44,12 @@ class pathVec
         vector<double> vprob, gcprob, ppprob, transPGC;
         //
         vector<double> ppprob2, vprob2;
-        vector<int> pswitch2;
+        // vector<int> pswitch2;
         vector<string> vpath2;
 };
 
 void generateStates(const hapDef &hapInfo, hmmStates &st );
 void generateXstates(const hapDef &hapInfo, hmmStates &st );
-
-void getXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, double &trX );
 
 void getsprob( 
         const vector<int> &sites0, 

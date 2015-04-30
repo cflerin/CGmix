@@ -443,7 +443,7 @@ int main(int argc, char *argv[]) {
         logfile << "Starting posterior decoding..." << endl;
         pvec.pppath2.resize( sites.size() );
         pvec.ppprob2.resize( sites.size(), 0.0 );
-        pvec.pswitch2 = pvec.pswitch;
+        // pvec.pswitch2 = pvec.pswitch;
         //postDecode( fwd, bwd, st2, Pxa, pprob, pvec, logfile);
         postDecode( fwd, bwd, st2, Pxa, pprob, pvec.pppath2, pvec.ppprob2, logfile);
 

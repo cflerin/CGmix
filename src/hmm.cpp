@@ -85,47 +85,6 @@ void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
     }
 }
 
-void getXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, double &trX ) {
-    double u, rho;
-    int nm;
-    if( st.Xpop[to] == 1 ) {
-        u = p.u1;
-        nm = p.n1;
-        //rho = 4.0 * p.Ne1 * (r/d);
-        rho = ( 4.0 * p.Ne1 * (r/d) ) / nm;
-    }
-    if( st.Xpop[to] == 2 ) {
-        u = 1.0 - p.u1;
-        nm = p.n2;
-        rho = ( 4.0 * p.Ne2 * (r/d) ) / nm;
-    }
-    // cout << "From " << st.Xhap[from] << " To " << st.Xhap[to] ;
-    // cout << " | " << u << " " << nm << " ";
-    if( st.Xpop[from] != st.Xpop[to] ) { // ancestry and haplotype switch:
-        // cout << " anc sw! ";
-        // trX = ( 1.0 - exp( -d * p.rho * p.T ) ) * u/nm;
-        trX = ( 1.0 - exp( -r * p.T ) ) * u/nm;
-    } else { // no ancestry switch
-        if( st.Xhap[from] != st.Xhap[to] ) { // hap switch
-            // cout << " hap sw! ";
-            // trX = exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
-            //       ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
-            trX = exp( -r * p.T ) * ( 1.0 - exp( -r * rho ) ) / nm + 
-                  ( 1.0 - exp( -r * p.T )) * u / nm ;
-        }
-        if( st.Xhap[from] == st.Xhap[to] ) { // no hap switch
-            // cout << " cont! ";
-            // trX = exp( -d * p.rho * p.T ) * exp( -d * p.rho ) + 
-            //       exp( -d * p.rho * p.T ) * ( 1.0 - exp( -d * p.rho ) ) / nm + 
-            //       ( 1.0 - exp( -d * p.rho * p.T )) * u / nm ;
-            trX = exp( -r * p.T ) * exp( -r * rho ) + 
-                  exp( -r * p.T ) * ( 1.0 - exp( -r * rho ) ) / nm + 
-                  ( 1.0 - exp( -r * p.T )) * u / nm ;
-        }
-    }
-    trX = log(trX);
-}
-
 void getsprob( 
         const vector<int> &sites0, 
         const parameters &p, 
@@ -173,7 +132,7 @@ void getsprobX(
     vector<double> sprobX; // [ pop1, pop2 ]
     sprobX.push_back( log( p.u1 / p.n1 ) ); // pop1
     sprobX.push_back( log( ( 1.0 - p.u1 ) / p.n2 ) ); // pop2
-    double tmpsum = 0.0;
+    //double tmpsum = 0.0;
     for(int i=0; i < st.states.size(); i++) {
         if( sites0[ st.Xindx[i] ] == obs[0] ) {
             e = p.emitMatch[ st.Xpop[i] - 1 ];
@@ -181,9 +140,9 @@ void getsprobX(
             e = p.emitMismatch[ st.Xpop[i] - 1 ];
         }
         sprob[i] = sprobX[ st.Xpop[i] - 1 ] + e;
-        tmpsum += exp( sprobX[ st.Xpop[i] - 1 ] );
+        //tmpsum += exp( sprobX[ st.Xpop[i] - 1 ] );
     }
-    cout << "sprob sum = " << tmpsum << endl;
+    //cout << "sprob sum = " << tmpsum << endl;
 }
 
 double lookupXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trXbin ) {
@@ -355,7 +314,7 @@ void forward(
                 }
             } // end 'from' loop
             // determine population of 'to' haplotype:
-            if( ( pswitch[j] == 1 ) ) { // if GC chain...
+            if( pswitch[j] == 1 ) { // if GC chain...
                 if( st.Gpop[t] == 0 ) { // ... and G==0
                     whichPop = st.Xpop[t]; // use Xpop when G==0
                 } else { // G!=0
@@ -394,6 +353,7 @@ void backward(
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
     vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
+    unsigned int whichPop;
     vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
         //cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << bwd[j].size() << endl;
@@ -410,6 +370,30 @@ void backward(
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int t=0; t < bwd[j+1].size(); t++ ) {
                 trX = lookupXtrans( t, f, d, r, st, p, trXbin);
+
+                if( pswitch[j+1] == 1 ) { // if CG chain exists at 'to' site...
+                    if( st.Gpop[t] == 0 ) { // ... and G==0
+                        whichPop = st.Xpop[t]; // use Xpop when G==0
+                    } else { // G!=0
+                        whichPop = st.Gpop[t]; // use Gpop when G!=0
+                    }
+                } else { // no GC chain
+                    whichPop = st.Xpop[t]; // use Xpop when G chain does not exist
+                }
+                if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
+                    e = p.emitMatch[ whichPop - 1 ];
+                } else {
+                    e = p.emitMismatch[ whichPop - 1 ];
+                }
+                if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
+                    //cout << "\ttrx + trG" << endl;
+                    trG = lookupGtrans( t, f, d, r, st, p, trGbin);
+                    tmp[t] = bwd[j+1][t] + trX + trG + e ;
+                } else {
+                    //cout << "\ttrx" << endl;
+                    tmp[t] = bwd[j+1][t] + trX + e ;
+                }
+/*
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
                     if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
                     else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
@@ -425,6 +409,7 @@ void backward(
                     //cout << "\ttrx" << endl;
                     tmp[t] = bwd[j+1][t] + trX + e ;
                 }
+*/
             } // t loop
             logSumExp( tmp, lsum, p.passAcc );
             bwd[j][f] = lsum;
@@ -584,7 +569,6 @@ void viterbi(
         siteIndx = st.Xindx;
     }
     for(int j=1; j < sites.size() ; j++ ) {
-        //d = dvec[j] - dvec[j-1];
         d = pos.pos[j] - pos.pos[j-1];
         r = pos.cM[j] - pos.cM[j-1];
         for(int t=0; t < st.states.size(); t++ ) {
@@ -602,11 +586,9 @@ void viterbi(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
+                e = p.emitMatch[ st.Xpop[t] - 1 ];
             } else {
-                if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
+                e = p.emitMismatch[ st.Xpop[t] - 1 ];
             }
             vit[j][t] = e + vmax;
         } // end to loop
@@ -673,6 +655,7 @@ void viterbi2(
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
     vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
+    unsigned int whichPop;
     for(int j=1; j < sites.size() ; j++ ) {
         //d = dvec[j] - dvec[j-1];
         d = pos.pos[j] - pos.pos[j-1];
@@ -695,13 +678,21 @@ void viterbi2(
                 if( tmp > vmax )
                     vmax = tmp;
             } // end from loop
+            // determine population of 'to' haplotype:
+            if( pvec.pswitch[j] == 1 ) { // if GC chain...
+                if( st.Gpop[t] == 0 ) { // ... and G==0
+                    whichPop = st.Xpop[t]; // use Xpop when G==0
+                } else { // G!=0
+                    whichPop = st.Gpop[t]; // use Gpop when G!=0
+                }
+            } else { // no GC chain
+                whichPop = st.Xpop[t]; // use Xpop when G chain does not exist
+            }
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
-                else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
+                e = p.emitMatch[ st.Xpop[t] - 1 ];
             } else {
-                if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
-                else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
+                e = p.emitMismatch[ st.Xpop[t] - 1 ];
             }
             vit[j][t] = e + vmax;
         } // end to loop
