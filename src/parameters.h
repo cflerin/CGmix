@@ -44,10 +44,6 @@ class parameters
         double theta2;  // determined
         vector<double> emitMatch;
         vector<double> emitMismatch;
-        double emit1_match;    // determined
-        double emit1_mismatch; // determined
-        double emit2_match;    // determined
-        double emit2_mismatch; // determined
         int highAccuracy; // whether to use sort in logSumExp (1) or not (0)
         int passAcc; // if two-pass model, use this for force sort on first pass
         int viterbi; // whether to run viterbi or not

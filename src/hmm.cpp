@@ -21,6 +21,7 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
         st.Ghap.push_back( 0 );
         st.Gpop.push_back( 0 );
         st.Gindx.push_back( j ); // check if this is right
+        st.Epop.push_back( hapInfo.hP[j] ); // X pop
         // keep original naming scheme:
         hapNamesG.push_back( "0" );
         hapPopG.push_back( "0" );
@@ -37,6 +38,7 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
             st.Ghap.push_back( hapInfo.hN[i] );
             st.Gpop.push_back( hapInfo.hP[i] );
             st.Gindx.push_back( i );
+            st.Epop.push_back( hapInfo.hP[i] ); // G pop
             // keep original naming scheme:
             hapNamesG.push_back( hapInfo.hapName[i] );
             hapPopG.push_back( hapInfo.hapPop[i] );
@@ -46,7 +48,7 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
     }
     // state concatenation:
     nrow = st.Xhap.size();
-    //cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates" << endl;
+    //cout << "i\tXhap\tXpop\tXindx\tGhap\tGpop\tGindx\tstates\tEmitPop" << endl;
     for(int i=0; i < nrow; i++) {
         string tmp;
         // tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]) + "-" + std::to_string(st.Gpop[i]) + "-" + std::to_string(st.Ghap[i]);
@@ -54,7 +56,7 @@ void generateStates(const hapDef &hapInfo, hmmStates &st ) {
         //tmp = st.Xpop[i] + "-" + st.Xhap[i] + "-" + st.Gpop[i] + "-" + st.Ghap[i];
         st.states.push_back( tmp );
         //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" <<
-        //     st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << endl;
+        //     st.Ghap[i] << "\t" << st.Gpop[i] << "\t" << st.Gindx[i] << "\t" << st.states[i] << "\t" << st.Epop[i] << endl;
     }
 }
 
@@ -68,6 +70,7 @@ void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
         st.Xpop.push_back( hapInfo.hP[j] );
         st.Xindx.push_back( j );
         st.Ghap.push_back( 0 ); // fill this vector with null GC states
+        st.Epop.push_back( hapInfo.hP[j] ); // X pop
         // keep original naming scheme:
         hapNames.push_back( hapInfo.hapName[j] );
         hapPop.push_back( hapInfo.hapPop[j] );
@@ -75,13 +78,13 @@ void generateXstates(const hapDef &hapInfo, hmmStates &st ) {
     }
     // state concatenation:
     nrow = st.Xhap.size();
-    //cout << "i\tXhap\tXpop\tXindx\tGhap\tstates" << endl;
+    //cout << "i\tXhap\tXpop\tXindx\tGhap\tstates\tEmitPop" << endl;
     string tmp;
     for(int i=0; i < nrow; i++) {
         // tmp = std::to_string(st.Xpop[i]) + "-" + std::to_string(st.Xhap[i]);
         tmp = hapPop[i] + "-" + hapNames[i];
         st.states.push_back( tmp );
-        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.Ghap[i] << "\t" << st.states[i] << endl;
+        //cout << i << "\t" << st.Xhap[i] << "\t" << st.Xpop[i] << "\t" << st.Xindx[i] << "\t" << st.Ghap[i] << "\t" << st.states[i] << "\t" << st.Epop[i] << endl;
     }
 }
 
@@ -100,20 +103,17 @@ void getsprob(
     vector<double> sprob_G1; // [ pop1, pop2 ]
     sprob_G1.push_back( log( ( g * p.T ) / ( p.lam * ( p.n1 + p.n2 ) + g * p.T ) * ( p.u1 / p.n1 ) ) ); // pop1
     sprob_G1.push_back( log( ( g * p.T ) / ( p.lam * ( p.n1 + p.n2 ) + g * p.T ) * ( ( 1.0 - p.u1 ) / p.n2 ) ) ); // pop2
-    unsigned int whichGpop;
     //double tmpsum = 0.0;
     for(int i=0; i < st.states.size(); i++) {
         if( st.Ghap[i] == 0 ) { // match on Xpop if G==0
-            whichGpop = st.Xpop[i];
             sprobG_i = sprob_G0; // use G0
         } else { // match on Gpop if G!=0
-            whichGpop = st.Gpop[i];
-            sprobG_i = sprob_G1[ whichGpop - 1 ]; // use pop-specific G1
+            sprobG_i = sprob_G1[ st.Gpop[i] - 1 ]; // use pop-specific G1
         }
         if( sites0[ st.Gindx[i] ] == obs[0] ) {
-            e = p.emitMatch[ whichGpop - 1 ];
+            e = p.emitMatch[ st.Epop[i] - 1 ];
         } else {
-            e = p.emitMismatch[ whichGpop - 1 ];
+            e = p.emitMismatch[ st.Epop[i] - 1 ];
         }
         sprob[i] = sprobX[ st.Xpop[i] - 1 ] + sprobG_i + e;
         //tmpsum += exp( sprobX[ st.Xpop[i] - 1 ] + sprobG_i );
@@ -146,12 +146,12 @@ void getsprobX(
 }
 
 double lookupXtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trXbin ) {
-    // Here, the input r is genetic distance in Morgans, d in kb
-    // convert to rate:
-    double rrate = r / d;
-    double trX1, trX2, trX3, trX4, trX5, trX6;
     // first pass at this site: calculate all reusable values:
     if( trXbin[6] == 99 ) {
+        // Here, the input r is genetic distance in Morgans, d in kb
+        // convert to rate:
+        double rrate = r / d;
+        double trX1, trX2, trX3, trX4, trX5, trX6;
         // pop1:
         double rho1 = 4.0 * p.Ne1 * rrate;
         trX1 = ( 1.0 - exp( -rrate * d * p.T ) ) * p.u1 / p.n1;
@@ -199,57 +199,49 @@ double lookupXtrans(const int &to, const int &from, const double &d, const doubl
 inline double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin ) {
     // first pass at this site: calculate all reusable values:
     if( trGbin[10] == 99 ) {
-        double int1, int2p1, int2p2, gam1, gam2, tmp;
-        double pfrd4 = p.f * 4 * r / d;
-        gam1 = pfrd4 * p.Ne1;
-        gam2 = pfrd4 * p.Ne2;
-        //cout << "r=" << r << "\td=" << d << "\tgam1=" << gam1 << "\tgam2=" << gam2 << endl;
-        //gam1 = p.f * ( 4.0 * p.Ne1 * (r/d) );
-        //gam2 = p.f * ( 4.0 * p.Ne2 * (r/d) );
-        //
-        double rpT = r*p.T;
-        double plampn1pn2 = p.lam*p.n1*p.n2;
-        double tmp1 = exp( -d * (p.lam+(gam1/p.n1 + gam2/p.n2)*rpT));
-        double tmp2 = exp( -p.lam * d );
-        double tmp3 = exp( -rpT * d * (gam1/p.n1 + gam2/p.n2));
-        double gam2pn1gam1pn2 = (gam2*p.n1+gam1*p.n2);
-        int1 = ( ( 1.0 - tmp1) * plampn1pn2 ) / ( plampn1pn2 + gam2pn1gam1pn2*rpT );
-        int2p1 = ( ( tmp1 - 1.0) * p.lam*p.n2*p.u1 ) /
-                 ( plampn1pn2 + gam2pn1gam1pn2*rpT ) +
-                 ( p.u1 - tmp2 * p.u1 ) / p.n1;
-        int2p2 = ( ( tmp1 - 1.0) * p.lam*p.n1*p.u2 ) /
-                 ( plampn1pn2 + gam2pn1gam1pn2*rpT ) +
-                 ( p.u2 - tmp2 * p.u2 ) / p.n2;
+        // Here, the input r is genetic distance in Morgans, d in kb
+        // convert to rate:
+        double rrate = r / d;
+        double int1, int2p1, int2p2, tmp;
+        double g = p.f * rrate;
+        double expdlgt = exp( -d * ( p.lam + g * p.T ) );
+        double expdl = exp( -d * p.lam );
+        int1 = ( ( 1.0 - expdlgt ) * p.lam ) / ( p.lam + g * p.T );
+        int2p1 = ( p.u1 - expdl * p.u1 + 
+               ( ( -1.0 + expdlgt ) * p.lam * p.u1 ) / ( p.lam + g * p.T )
+               ) / p.n1;
+        int2p2 = ( ( 1.0 - p.u1 ) - expdl * ( 1.0 - p.u1 ) + 
+               ( ( -1.0 + expdlgt ) * p.lam * ( 1.0 - p.u1 ) ) / ( p.lam + g * p.T )
+               ) / p.n2;
         // 0 //
-        tmp = log( exp( -p.lam * d ) * exp( -r * d * p.T * (gam1/p.n1 + gam2/p.n2) ) + int1 );
+        tmp = log( expdl * expdlgt + int1 );
         trGbin[0] = tmp;
         trGbin[5] = tmp;
         // 1 //
-        trGbin[1] = log( tmp2 * ( 1.0 - tmp3) * p.u1/p.n1 + int2p1 );
+        trGbin[1] = log( expdl * ( 1.0 - expdlgt ) * p.u1 / p.n1 + int2p1 );
         // 2 //
         tmp = log( int1 );
         trGbin[2] = tmp;
         trGbin[7] = tmp;
         // 3 //
-        trGbin[3] = log( tmp2 + int2p1 );
+        trGbin[3] = log( expdl + int2p1 );
         // 4 //
         trGbin[4] = log( int2p1 );
-        /////// population 2:
         // 5 //
         // 6 //
-        trGbin[6] = log( tmp2 * ( 1.0 - tmp3) * p.u2/p.n2 + int2p2 );
+        trGbin[6] = log( expdl * ( 1.0 - expdlgt ) * ( 1.0 - p.u1 ) / p.n2 + int2p2 );
         // 7 //
         // 8 //
-        trGbin[8] = log( tmp2 + int2p2 );
+        trGbin[8] = log( expdl + int2p2 );
         // 9 //
         trGbin[9] = log( int2p2 );
         /////// flag:
         trGbin[10] = 1.0;
         // prob sums check:
         // for(int z=0; z<trGbin.size(); z++) { cout << exp(trGbin[z]) << endl; }
-        // cout << "trGbinsum0=" << exp(trGbin[0]) + exp(trGbin[1])*p.n1 + exp(trGbin[6])*p.n2 << endl;
-        // cout << "trGbinsum1=" << exp(trGbin[2]) + exp(trGbin[3]) + exp(trGbin[4])*(p.n1-1) + exp(trGbin[9])*(p.n2) << endl;
-        // cout << "trGbinsum2=" << exp(trGbin[2]) + exp(trGbin[8]) + exp(trGbin[9])*(p.n2-1) + exp(trGbin[4])*(p.n1) << endl;
+        // cout << "trGbinsum0=" << exp(trGbin[0]) + exp(trGbin[1])*p.n1 + exp(trGbin[6])*p.n2;
+        // cout << "\ttrGbinsum1=" << exp(trGbin[2]) + exp(trGbin[3]) + exp(trGbin[4])*(p.n1-1) + exp(trGbin[9])*(p.n2);
+        // cout << "\ttrGbinsum2=" << exp(trGbin[2]) + exp(trGbin[8]) + exp(trGbin[9])*(p.n2-1) + exp(trGbin[4])*(p.n1) << endl;
     }
     // return a pre-calculated value:
     int type = 4;
@@ -287,7 +279,6 @@ void forward(
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
     vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
-    unsigned int whichPop;
     vector<double> tmp;
     //cout << "pswitch"<<pswitch.size() << endl;
     for(int j=1; j < sites.size() ; j++ ) {
@@ -313,20 +304,10 @@ void forward(
                     tmp[f] = fwd[j-1][f] + trX;
                 }
             } // end 'from' loop
-            // determine population of 'to' haplotype:
-            if( pswitch[j] == 1 ) { // if GC chain...
-                if( st.Gpop[t] == 0 ) { // ... and G==0
-                    whichPop = st.Xpop[t]; // use Xpop when G==0
-                } else { // G!=0
-                    whichPop = st.Gpop[t]; // use Gpop when G!=0
-                }
-            } else { // no GC chain
-                whichPop = st.Xpop[t]; // use Xpop when G chain does not exist
-            }
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = p.emitMatch[ whichPop - 1 ];
+                e = p.emitMatch[ st.Epop[t] - 1 ];
             } else {
-                e = p.emitMismatch[ whichPop -1 ];
+                e = p.emitMismatch[ st.Epop[t] - 1 ];
             }
             // cout << "j=" << j << endl;
             logSumExp( tmp, lsum, p.passAcc );
@@ -353,7 +334,6 @@ void backward(
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
     vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
     vector<int> siteIndx;
-    unsigned int whichPop;
     vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
         //cout << "j = " << j << "\t" << "pswitch=" << pswitch[j] << " Nstates=" << bwd[j].size() << endl;
@@ -370,20 +350,10 @@ void backward(
             std::fill( tmp.begin(), tmp.end(), 0.0 );
             for(int t=0; t < bwd[j+1].size(); t++ ) {
                 trX = lookupXtrans( t, f, d, r, st, p, trXbin);
-
-                if( pswitch[j+1] == 1 ) { // if CG chain exists at 'to' site...
-                    if( st.Gpop[t] == 0 ) { // ... and G==0
-                        whichPop = st.Xpop[t]; // use Xpop when G==0
-                    } else { // G!=0
-                        whichPop = st.Gpop[t]; // use Gpop when G!=0
-                    }
-                } else { // no GC chain
-                    whichPop = st.Xpop[t]; // use Xpop when G chain does not exist
-                }
                 if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    e = p.emitMatch[ whichPop - 1 ];
+                    e = p.emitMatch[ st.Epop[t] - 1 ];
                 } else {
-                    e = p.emitMismatch[ whichPop - 1 ];
+                    e = p.emitMismatch[ st.Epop[t] - 1 ];
                 }
                 if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
                     //cout << "\ttrx + trG" << endl;
@@ -393,23 +363,6 @@ void backward(
                     //cout << "\ttrx" << endl;
                     tmp[t] = bwd[j+1][t] + trX + e ;
                 }
-/*
-                if( sites[j+1][ siteIndx[t] ] == obs[j+1] ) {
-                    if( st.Xpop[t] == 1 ) { e = p.emit1_match; }
-                    else if( st.Xpop[t] == 2 ) { e = p.emit2_match; }
-                } else {
-                    if( st.Xpop[t] == 1 ) { e = p.emit1_mismatch; }
-                    else if( st.Xpop[t] == 2 ) { e = p.emit2_mismatch; }
-                }
-                if( ( pswitch[j] == 1 ) || ( pswitch[j+1] == 1 ) ) {
-                    //cout << "\ttrx + trG" << endl;
-                    trG = lookupGtrans( t, f, d, r, st, p, trGbin);
-                    tmp[t] = bwd[j+1][t] + trX + trG + e ;
-                } else {
-                    //cout << "\ttrx" << endl;
-                    tmp[t] = bwd[j+1][t] + trX + e ;
-                }
-*/
             } // t loop
             logSumExp( tmp, lsum, p.passAcc );
             bwd[j][f] = lsum;
@@ -586,9 +539,9 @@ void viterbi(
             } // end from loop
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = p.emitMatch[ st.Xpop[t] - 1 ];
+                e = p.emitMatch[ st.Epop[t] - 1 ];
             } else {
-                e = p.emitMismatch[ st.Xpop[t] - 1 ];
+                e = p.emitMismatch[ st.Epop[t] - 1 ];
             }
             vit[j][t] = e + vmax;
         } // end to loop
@@ -690,9 +643,9 @@ void viterbi2(
             }
             // emission prob:
             if( sites[j][ siteIndx[t] ] == obs[j] ) {
-                e = p.emitMatch[ st.Xpop[t] - 1 ];
+                e = p.emitMatch[ st.Epop[t] - 1 ];
             } else {
-                e = p.emitMismatch[ st.Xpop[t] - 1 ];
+                e = p.emitMismatch[ st.Epop[t] - 1 ];
             }
             vit[j][t] = e + vmax;
         } // end to loop

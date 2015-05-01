@@ -32,7 +32,7 @@ class hmmStates
         hmmStates(){};
         ~hmmStates(){};
         vector<string> states;
-        vector<int> Xpop, Xhap, Gpop, Ghap, Xindx, Gindx;
+        vector<int> Xpop, Xhap, Gpop, Ghap, Xindx, Gindx, Epop;
 };
 class pathVec
 {

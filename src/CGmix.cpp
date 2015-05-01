@@ -182,11 +182,6 @@ int main(int argc, char *argv[]) {
     param.emitMatch.push_back( log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) ) ); // pop2
     param.emitMismatch.push_back( log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) ) ); // pop1
     param.emitMismatch.push_back( log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) ) ); // pop2
-    //
-    param.emit1_match = log( ( 2.0 * param.n1 + param.theta1 )/( 2.0 * ( param.n1 + param.theta1 ) ) );
-    param.emit2_match = log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) );
-    param.emit1_mismatch = log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) );
-    param.emit2_mismatch = log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) );
 
     pathVec pvec( param );
     param.print_params(logfile, 1);
@@ -372,15 +367,15 @@ int main(int argc, char *argv[]) {
 
         // set theta using watterson's estimator:
         param.theta1 = param.theta2 = 0.0;
-        for(int m=1; m < param.n1; m++) { param.theta1 += 1/m; }
-        for(int m=1; m < param.n2; m++) { param.theta2 += 1/m; }
+        for(int m=1; m < param.n1; m++) { param.theta1 += 1.0/m; }
+        for(int m=1; m < param.n2; m++) { param.theta2 += 1.0/m; }
         param.theta1 = 1.0 / param.theta1;
         param.theta2 = 1.0 / param.theta2;
-        // emissions probabilities:
-        param.emit1_match = log( ( 2.0 * param.n1 + param.theta1 )/( 2.0 * ( param.n1 + param.theta1 ) ) );
-        param.emit1_mismatch = log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) );
-        param.emit2_match = log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) );
-        param.emit2_mismatch = log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) );
+        // emissions probabilities: vector of [ pop1, pop2 ] values:
+        param.emitMatch[0] = log( ( 2.0 * param.n1 + param.theta1 )/( 2.0 * ( param.n1 + param.theta1 ) ) ); // pop1
+        param.emitMatch[1] = log( ( 2.0 * param.n2 + param.theta2 )/( 2.0 * ( param.n2 + param.theta2 ) ) ); // pop2
+        param.emitMismatch[0] = log( param.theta1 / ( 2.0 * ( param.n1 + param.theta1 ) ) ); // pop1
+        param.emitMismatch[1] = log( param.theta2 / ( 2.0 * ( param.n2 + param.theta2 ) ) ); // pop2
 
         hmmStates st2;
         generateStates( hapInfo, st2 );
