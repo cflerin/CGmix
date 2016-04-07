@@ -198,45 +198,78 @@ double lookupXtrans(const int &to, const int &from, const double &d, const doubl
 
 inline double lookupGtrans(const int &to, const int &from, const double &d, const double &r, const hmmStates &st, const parameters &p, vector<double> &trGbin ) {
     // first pass at this site: calculate all reusable values:
-    if( trGbin[10] == 99 ) {
+    if( trGbin[16] == 99 ) {
         // Here, the input r is genetic distance in Morgans, d in kb
         // convert to rate:
         double rrate = r / d;
-        double int1, int2p1, int2p2, tmp;
+        double int1, int2within, int2cross;
+        double gam, expdl, expgdT, expdgamn, expGCwithin, Z, u, n;
+        int ixOffset;
         double g = p.f * rrate;
-        double expdlgt = exp( -d * ( p.lam + g * p.T ) );
-        double expdl = exp( -d * p.lam );
-        int1 = ( ( 1.0 - expdlgt ) * p.lam ) / ( p.lam + g * p.T );
-        int2p1 = ( p.u1 - expdl * p.u1 + 
-               ( ( -1.0 + expdlgt ) * p.lam * p.u1 ) / ( p.lam + g * p.T )
-               ) / p.n1;
-        int2p2 = ( ( 1.0 - p.u1 ) - expdl * ( 1.0 - p.u1 ) + 
-               ( ( -1.0 + expdlgt ) * p.lam * ( 1.0 - p.u1 ) ) / ( p.lam + g * p.T )
-               ) / p.n2;
-        // 0 //
-        tmp = log( expdl * expdlgt + int1 );
-        trGbin[0] = tmp;
-        trGbin[5] = tmp;
-        // 1 //
-        trGbin[1] = log( expdl * ( 1.0 - expdlgt ) * p.u1 / p.n1 + int2p1 );
-        // 2 //
-        tmp = log( int1 );
-        trGbin[2] = tmp;
-        trGbin[7] = tmp;
-        // 3 //
-        trGbin[3] = log( expdl + int2p1 );
-        // 4 //
-        trGbin[4] = log( int2p1 );
-        // 5 //
-        // 6 //
-        trGbin[6] = log( expdl * ( 1.0 - expdlgt ) * ( 1.0 - p.u1 ) / p.n2 + int2p2 );
-        // 7 //
-        // 8 //
-        trGbin[8] = log( expdl + int2p2 );
-        // 9 //
-        trGbin[9] = log( int2p2 );
+
+        for(int pop=0; pop<=1; pop++) {
+            if( pop==0 ) { // pop 1
+                u = p.u1;
+                n = p.n1;
+                gam = p.f * 4.0 * p.Ne1 * rrate;
+                ixOffset = 0;
+            } else {
+                if( pop==1 ) { // pop 2
+                    u = 1.0 - p.u1;
+                    n = p.n2;
+                    gam = p.f * 4.0 * p.Ne2 * rrate;
+                    ixOffset = 8;
+                }
+            }
+            expdl = exp( -d * p.lam );
+            expgdT = exp( -g * d * p.T );
+            expdgamn = exp( -d * gam / n );
+            expGCwithin = ( 1.0 - exp( -g * d * p.T )) * ( 1.0 - exp( -d * gam/n ));
+            Z = ( g * p.T ) / ( g * p.T + gam/n ) * u/n + ( gam/n )/( g * p.T + gam/n ) * ( 1.0 / n );
+            int1 = ( ( 1.0 - exp( -d *( p.lam + gam/n + g * p.T ))) * p.lam*n ) / ( gam + n*(p.lam+g*p.T) );
+            int2within = (-exp(-d*p.lam)+ (exp(-d*(p.lam+gam/n))*p.lam*n)/(gam+p.lam*n) + 
+                         (exp(-d*(p.lam+g*p.T))*p.lam)/(p.lam+g*p.T) -
+                         (exp(-d*(p.lam+gam/n+g*p.T))*p.lam*n) / (gam+n*(p.lam+g*p.T)) + 
+                         gam*(1.0/(gam+p.lam*n) - p.lam/((p.lam+g*p.T)*(gam+p.lam*n+g*n*p.T)) ) ) * Z;
+            int2cross = ( u-exp(-d*p.lam)*u + ( (-1.0+exp(-d*(p.lam+g*p.T)))*p.lam*u ) / (p.lam+g*p.T) ) / n;
+            // tr 1
+            trGbin[0+ixOffset] = expdl * expgdT * expdgamn + int1;
+            // tr 2, within pop
+            trGbin[1+ixOffset] = expdl * expGCwithin * Z + int2within;
+            // tr 2, cross pop
+            trGbin[2+ixOffset] = expdl * (1.0-expdgamn) * u/n + int2cross;
+            // tr 3
+            trGbin[3+ixOffset] = int1;
+            // tr 4, within, extend
+            trGbin[4+ixOffset] = expdl + int2within;
+            // tr 4, cross, extend
+            trGbin[5+ixOffset] = expdl + int2cross;
+            // tr 4, within, newGC
+            trGbin[6+ixOffset] = int2within;
+            // tr 4, cross, newGC
+            trGbin[7+ixOffset] = int2cross;
+        }
+        // normalize:
+        vector<int> rsix;
+        for(int i=0; i < p.n1; i++) rsix.push_back( 0 );
+        for(int i=0; i < (p.n2^2); i++) rsix.push_back( 9 );
+        for(int i=0; i < (p.n1^2); i++) rsix.push_back( 10 );
+        for(int i=0; i < (p.n1^2); i++) rsix.push_back( 1 );
+        for(int i=0; i < (p.n1^2); i++) rsix.push_back( 2 );
+        for(int i=0; i < p.n2; i++) rsix.push_back( 8 );
+        double rs = 0.0;
+        for(int i=0; i < rsix.size(); i++) {
+            // cout << rsix[i] << " " << endl;
+            rs += trGbin[ rsix[i] ];
+        }
+        // cout << "rs=" << rs << endl;
+        for(int i=0; i < trGbin.size(); i++) {
+            // trGbin[i] = trGbin[i] / rs;
+            trGbin[i] = log( trGbin[i] / rs );
+        }
+
         /////// flag:
-        trGbin[10] = 1.0;
+        trGbin[16] = 1.0;
         // prob sums check:
         // for(int z=0; z<trGbin.size(); z++) { cout << exp(trGbin[z]) << endl; }
         // cout << "trGbinsum0=" << exp(trGbin[0]) + exp(trGbin[1])*p.n1 + exp(trGbin[6])*p.n2;
@@ -244,21 +277,31 @@ inline double lookupGtrans(const int &to, const int &from, const double &d, cons
         // cout << "\ttrGbinsum2=" << exp(trGbin[2]) + exp(trGbin[8]) + exp(trGbin[9])*(p.n2-1) + exp(trGbin[4])*(p.n1) << endl;
     }
     // return a pre-calculated value:
-    int type = 4;
-	if ( st.Ghap[from] == 0 ) {
-		if ( st.Ghap[from] == st.Ghap[to] )
-			type = 0;
-		else if ( st.Ghap[to] != 0 )
-			type = 1;
-	} else {
-		if ( st.Ghap[to] == 0 )
-			type = 2;
-		else if ( st.Ghap[from] == st.Ghap[to] )
-			type = 3;
-	}
-    if( st.Gpop[to] == 2 ) // shift type index by 5 if transitioning to a haplotype in pop #2.
-        type += 5;
-    //cout << " from" << st.Ghap[from] << " to" << st.Ghap[to];
+    int type;
+    int x2offset = 0;
+    int goffset = 0;
+    if( st.Xpop[to] == 2 ) x2offset = 8;
+    if( st.Gpop[to] == 2 ) goffset = 8;
+    ///
+    if( st.Gpop[to] == 0 ) { 
+        if( st.Gpop[from] == 0 ) { // prev null, currently null
+            type = 1 + x2offset;
+        } else { // ending a GC (currently null, previously in a GC)
+            type = 4 + x2offset;
+        }
+    } else {
+        if( st.Gpop[from] == 0 & st.Gpop[to] != 0 ) {                // entering a new GC
+            if( st.Xpop[to] == st.Gpop[to] ) type = 2 + goffset;     // within population GC
+            if( st.Xpop[to] != st.Gpop[to] ) type = 3 + goffset;     // cross population GC
+        } else if( st.Ghap[from] == st.Ghap[to] ) {                  // prev in GC, now in same GC
+                if( st.Xpop[to] == st.Gpop[to] ) type = 5 + goffset; // within population GC
+                if( st.Xpop[to] != st.Gpop[to] ) type = 6 + goffset; // cross population GC
+        } else if( st.Ghap[from] != st.Ghap[to] ) {                  // prev in GC, now in different GC
+            if( st.Xpop[to] == st.Gpop[to] ) type = 7 + goffset;     // within population GC
+            if( st.Xpop[to] != st.Gpop[to] ) type = 8 + goffset;     // cross population GC
+        }
+    }
+    //cout << "from X" << st.Xhap[from] << " to X" << st.Xhap[to] << "| from G" << st.Ghap[from] << " to G" << st.Ghap[to];
     //cout << " type" << type << endl;
     // lookup and return a value already seen:
     return( trGbin[ type ] );
@@ -277,7 +320,7 @@ void forward(
     fwd[0] = sprob;
     double lsum, trX, trG, e, d, r;
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
-    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
+    vector<double> trGbin(17,99); // 16 slots for transitions, 1 for flag
     vector<int> siteIndx;
     vector<double> tmp;
     //cout << "pswitch"<<pswitch.size() << endl;
@@ -332,7 +375,7 @@ void backward(
     double negInf = - std::numeric_limits<double>::infinity();
     double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
-    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
+    vector<double> trGbin(17,99); // 16 slots for transitions, 1 for flag
     vector<int> siteIndx;
     vector<double> tmp;
     for(int j = sites.size()-2; j >= 0 ; j-- ) {
@@ -514,7 +557,7 @@ void viterbi(
     double trX, trG, vmax, tmp, e, d, r;
     double negInf = - std::numeric_limits<double>::infinity();
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
-    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
+    vector<double> trGbin(17,99); // 16 slots for transitions, 1 for flag
     vector<int> siteIndx;
     if( p.mode == 1 ) {
         siteIndx = st.Gindx;
@@ -606,7 +649,7 @@ void viterbi2(
     double negInf = - std::numeric_limits<double>::infinity();
     //double log_eps = log(numeric_limits<double>::epsilon());
     vector<double> trXbin(7,99); // 6 slots for transitions, 1 for flag
-    vector<double> trGbin(11,99); // 10 slots for transitions, 1 for flag
+    vector<double> trGbin(17,99); // 16 slots for transitions, 1 for flag
     vector<int> siteIndx;
     unsigned int whichPop;
     for(int j=1; j < sites.size() ; j++ ) {
