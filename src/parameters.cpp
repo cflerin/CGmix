@@ -183,6 +183,7 @@ void parameters::print_help() {
             cout << "\t\t\t(.hapnames)  file: Two columns, the first gives the haplotype name, the second give the population it belongs to ('p1' or 'p2')." << endl;
             cout << "\t--admix" << "\t\tFile prefix for the admixed haplotype data.  Same 3 files as above, except only one admixed haplotype is allowed and it must be labeled as population 'p3'." << endl;
             cout << "\t--in" << "\t\tAlternate input format from --ref/--admix options above. Same 3 files as above, except the admixed haplotype is included in the same file as the reference haplotypes and the 'sites' and 'locs' files are transposed." << endl;
+            cout << "\t--pathfile" << "\tFor mode 3 only, specify the path0 output from the first pass." << endl;
             /////
 
             /////
@@ -191,7 +192,7 @@ void parameters::print_help() {
             cout << "\t\t\t0 runs a first-pass using only the crossover chain." << endl;
             cout << "\t\t\t1 runs the full haplotype and gene conversion model. Potentially very slow." << endl;
             cout << "\t\t\t2 runs the first pass mode (0) to select interesting sites, then restarts, applying the full model only on those sites." << endl;
-            cout << "\t\t\t3 takes input from a previous first pass run (mode 0) to mark interesting sites, and applies the full model only on those sites." << endl;
+            cout << "\t\t\t3 takes input from a previous first pass run (mode 0) to mark interesting sites, and applies the full model only on those sites (must specify --pathfile)." << endl;
             cout << "\t--T" << "\t\tNumber of generations since admixture. [Default = " << T << "]." << endl;
             cout << "\t--u1" << "\t\tAncestry contribution from pop 1. [Default, Europeans = " << u1 << "]." << endl;
             cout << "\t--Ne1" << "\t\tEffective population size for pop 1. [Default, Europeans = " << Ne1 << "]." << endl;
