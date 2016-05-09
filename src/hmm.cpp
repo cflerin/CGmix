@@ -224,13 +224,15 @@ inline double lookupGtrans(const int &to, const int &from, const double &d, cons
             expdl = exp( -d * p.lam );
             expgdT = exp( -g * d * p.T );
             expdgamn = exp( -d * gam / n );
-            expGCwithin = ( 1.0 - exp( -g * d * p.T )) * ( 1.0 - exp( -d * gam/n ));
+            // expGCwithin = ( 1.0 - exp( -g * d * p.T )) * ( 1.0 - exp( -d * gam/n ));
+            expGCwithin = ( 1.0 - exp( -g * d * p.T - d * gam/n ) ); // AA
             Z = ( g * p.T ) / ( g * p.T + gam/n ) * u/n + ( gam/n )/( g * p.T + gam/n ) * ( 1.0 / n );
             int1 = ( ( 1.0 - exp( -d *( p.lam + gam/n + g * p.T ))) * p.lam*n ) / ( gam + n*(p.lam+g*p.T) );
-            int2within = (-exp(-d*p.lam)+ (exp(-d*(p.lam+gam/n))*p.lam*n)/(gam+p.lam*n) + 
-                         (exp(-d*(p.lam+g*p.T))*p.lam)/(p.lam+g*p.T) -
-                         (exp(-d*(p.lam+gam/n+g*p.T))*p.lam*n) / (gam+n*(p.lam+g*p.T)) + 
-                         gam*(1.0/(gam+p.lam*n) - p.lam/((p.lam+g*p.T)*(gam+p.lam*n+g*n*p.T)) ) ) * Z;
+            // int2within = (-exp(-d*p.lam)+ (exp(-d*(p.lam+gam/n))*p.lam*n)/(gam+p.lam*n) + 
+            //              (exp(-d*(p.lam+g*p.T))*p.lam)/(p.lam+g*p.T) -
+            //              (exp(-d*(p.lam+gam/n+g*p.T))*p.lam*n) / (gam+n*(p.lam+g*p.T)) + 
+            //              gam*(1.0/(gam+p.lam*n) - p.lam/((p.lam+g*p.T)*(gam+p.lam*n+g*n*p.T)) ) ) * Z;
+             int2within = Z - exp(-d*p.lam)*Z - ( (1.0-exp(-d*(p.lam+gam/n+g*p.T)))*p.lam*u*Z ) / (n*( gam+n*(p.lam+g*p.T) )); // AA
             int2cross = ( u-exp(-d*p.lam)*u + ( (-1.0+exp(-d*(p.lam+g*p.T)))*p.lam*u ) / (p.lam+g*p.T) ) / n;
             // tr 1
             trGbin[0+ixOffset] = expdl * expgdT * expdgamn + int1;
